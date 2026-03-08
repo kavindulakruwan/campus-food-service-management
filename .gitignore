@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables
+.env
+.env.local
+backend/.env
+frontend/.env
+
+# Build output
+frontend/dist
+frontend/build
+backend/dist
+
+# Logs
+*.log
+npm-debug.log*
+
+# Uploads (local dev)
+backend/src/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.suo
+*.sw?
