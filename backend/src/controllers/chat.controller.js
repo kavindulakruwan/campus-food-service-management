@@ -21,7 +21,7 @@ exports.postMessage = async (req, res) => {
     }
 
     const newMessage = new ChatMessage({
-      user: req.user._id,
+      user: req.user.id,
       text: text.trim(),
     });
 
