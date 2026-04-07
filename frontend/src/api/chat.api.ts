@@ -20,3 +20,8 @@ export const postMessage = async (text: string) => {
   const response = await axiosClient.post<ChatMessage>('/chat', { text });
   return response.data;
 };
+
+export const postBotMessage = async (message: string, history: { text: string; isBot: boolean }[] = []) => {
+  const response = await axiosClient.post<{ reply: string }>('/chat/bot', { message, history });
+  return response.data;
+};

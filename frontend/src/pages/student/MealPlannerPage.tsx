@@ -11,6 +11,7 @@ import {
 } from '../../api/mealPlan.api'
 import type { MealPlanItem, MealTime } from '../../types/mealPlan'
 import CommunityChat from '../../components/ui/CommunityChat'
+import { MealPlannerChatbot } from '../../components/ui/MealPlannerChatbot'
 import './MealPlannerPage.css'
 
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
@@ -535,6 +536,7 @@ const MealPlannerPage = () => {
           </div>
         )}
       </section>
+      <MealPlannerChatbot />
     </section>
   )
 }
