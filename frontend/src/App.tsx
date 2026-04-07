@@ -5,6 +5,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 import DashboardPage from './pages/student/DashboardPage'
 import ProfilePage from './pages/student/ProfilePage'
 import MealPlannerPage from './pages/student/MealPlannerPage'
+import MealManagementPage from './pages/student/MealManagementPage'
 import FavoritesPage from './pages/student/FavoritesPage'
 import PantryPage from './pages/student/PantryPage'
 import AlertsPage from './pages/student/AlertsPage'
@@ -34,6 +35,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/meal-plans" element={<MealPlannerPage />} />
+            <Route path="/meal-management" element={<MealManagementPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/pantry" element={<PantryPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
