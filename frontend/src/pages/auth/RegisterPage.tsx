@@ -28,7 +28,12 @@ const RegisterPage = () => {
       await registerUser(formData);
       navigate('/login');
     } catch (err: any) {
-        setErrorLocal(err?.response?.data?.message || 'Failed to register');
+        if (err?.response?.data?.errors?.length > 0) {
+          const firstError = err.response.data.errors[0];
+          setErrorLocal(`${firstError.field === 'password' ? 'Password' : firstError.field}: ${firstError.message}`);
+        } else {
+          setErrorLocal(err?.response?.data?.message || 'Failed to register');
+        }
     } finally {
         setLoadingLocal(false);
     }
@@ -123,11 +128,14 @@ const RegisterPage = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  minLength={6}
+                  minLength={8}
                   className="focus:ring-emerald-500 focus:border-emerald-500 block w-full pl-10 sm:text-sm border-slate-300 rounded-xl bg-slate-50/50 py-3 transition-colors hover:bg-slate-50"
                   placeholder="••••••••"
                 />
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Must be at least 8 characters, and contain at least 1 uppercase letter and 1 number.
+              </p>
             </div>
 
              <div>
