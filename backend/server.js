@@ -16,8 +16,24 @@ const chatRoutes = require('./src/routes/chat.routes')
 const adminRoutes = require('./src/routes/admin.routes')
 const app = express()
 
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
 app.use(helmet())
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error(`CORS policy: origin ${origin} not allowed`))
+      }
+    },
+    credentials: true,
+  }),
+)
 app.use(morgan('dev'))
 app.use(express.json())
 app.use(cookieParser())
