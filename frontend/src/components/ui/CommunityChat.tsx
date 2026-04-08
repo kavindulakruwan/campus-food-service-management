@@ -1,106 +1,431 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import useAuth from '../../hooks/useAuth';
-import { getMessages, postMessage, type ChatMessage } from '../../api/chat.api';
+import {
+  deleteMessage,
+  getMessages,
+  postMessage,
+  updateMessage,
+  type ChatMessage,
+} from '../../api/chat.api';
+
+const EDIT_WINDOW_MS = 30 * 1000;
+
+type ScrollMode = 'preserve' | 'bottom';
+
+const BLOCKED_WORDS = [
+  'fuck',
+  'shit',
+  'bitch',
+  'bastard',
+  'asshole',
+  'motherfucker',
+  'dick',
+  'pussy',
+  'cunt',
+  'slut',
+  'whore',
+  'damn',
+  'fucker',
+  'nigga',
+  'nigger',
+  'retard',
+];
+
+const normalizeWord = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
+const hasBlockedWord = (text: string) => {
+  const tokens = text
+    .split(/\s+/)
+    .map(normalizeWord)
+    .filter(Boolean);
+
+  return tokens.some((token) => BLOCKED_WORDS.includes(token));
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    return (error.response?.data as { message?: string } | undefined)?.message || fallback;
+  }
+  if (error instanceof Error) return error.message;
+  return fallback;
+};
+
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+};
 
 const CommunityChat: React.FC = () => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [clockTick, setClockTick] = useState(Date.now());
 
-  const fetchMessages = async () => {
+  const listRef = useRef<HTMLDivElement>(null);
+  const scrollStateRef = useRef({ top: 0, height: 0, mode: 'bottom' as ScrollMode });
+
+  const currentUserId = (user as { id?: string; _id?: string } | null)?.id
+    ?? (user as { id?: string; _id?: string } | null)?._id;
+
+  const participantsCount = useMemo(() => new Set(messages.map((msg) => msg.user._id)).size, [messages]);
+
+  const latestMessageTime = useMemo(() => {
+    if (messages.length === 0) return 'No messages yet';
+    return new Date(messages[messages.length - 1].createdAt).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, [messages]);
+
+  const primeScrollState = (forceBottom = false) => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const distanceFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight;
+    const isNearBottom = distanceFromBottom < 80;
+
+    scrollStateRef.current = {
+      top: list.scrollTop,
+      height: list.scrollHeight,
+      mode: forceBottom || isNearBottom ? 'bottom' : 'preserve',
+    };
+  };
+
+  const isWithinEditWindow = (createdAt: string) => {
+    return Date.now() - new Date(createdAt).getTime() <= EDIT_WINDOW_MS;
+  };
+
+  const getRemainingSeconds = (createdAt: string) => {
+    const remaining = EDIT_WINDOW_MS - (clockTick - new Date(createdAt).getTime());
+    return Math.max(0, Math.ceil(remaining / 1000));
+  };
+
+  const fetchMessages = async (forceBottom = false) => {
+    primeScrollState(forceBottom);
     try {
       const data = await getMessages();
       setMessages(data);
+      setErrorMessage(null);
     } catch (error) {
       console.error('Failed to fetch messages:', error);
+      setErrorMessage(getErrorMessage(error, 'Failed to refresh messages.'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
+    void fetchMessages(true);
+
+    const fetchInterval = setInterval(() => {
+      void fetchMessages(false);
+    }, 5000);
+
+    const tickInterval = setInterval(() => {
+      setClockTick(Date.now());
+    }, 1000);
+
+    return () => {
+      clearInterval(fetchInterval);
+      clearInterval(tickInterval);
+    };
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const list = listRef.current;
+    if (!list) return;
+
+    if (scrollStateRef.current.mode === 'bottom') {
+      list.scrollTop = list.scrollHeight;
+      return;
+    }
+
+    const delta = list.scrollHeight - scrollStateRef.current.height;
+    list.scrollTop = scrollStateRef.current.top + Math.max(0, delta);
   }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    const cleanedText = newMessage.trim();
+    if (!cleanedText || isSending) return;
 
+    if (hasBlockedWord(cleanedText)) {
+      setErrorMessage('Message contains restricted language. Please rewrite your message.');
+      return;
+    }
+
+    setIsSending(true);
+    setErrorMessage(null);
     try {
-      const savedMessage = await postMessage(newMessage);
-      setMessages([...messages, savedMessage]);
+      const savedMessage = await postMessage(cleanedText);
+      scrollStateRef.current.mode = 'bottom';
+      setMessages((prev) => [...prev, savedMessage]);
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
+      setErrorMessage(getErrorMessage(error, 'Failed to send message.'));
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const startEditing = (message: ChatMessage) => {
+    setEditingMessageId(message._id);
+    setEditText(message.text);
+    setErrorMessage(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditText('');
+  };
+
+  const submitEdit = async (messageId: string) => {
+    const cleaned = editText.trim();
+    if (!cleaned) {
+      setErrorMessage('Message text is required.');
+      return;
+    }
+
+    if (hasBlockedWord(cleaned)) {
+      setErrorMessage('Message contains restricted language. Please rewrite your message.');
+      return;
+    }
+
+    setIsUpdating(true);
+    setErrorMessage(null);
+    try {
+      const updated = await updateMessage(messageId, cleaned);
+      primeScrollState(false);
+      setMessages((prev) => prev.map((msg) => (msg._id === messageId ? updated : msg)));
+      cancelEditing();
+    } catch (error) {
+      console.error('Failed to update message:', error);
+      setErrorMessage(getErrorMessage(error, 'Failed to update message.'));
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = async (messageId: string) => {
+    setIsDeletingId(messageId);
+    setErrorMessage(null);
+    try {
+      await deleteMessage(messageId);
+      primeScrollState(false);
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+      if (editingMessageId === messageId) cancelEditing();
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      setErrorMessage(getErrorMessage(error, 'Failed to delete message.'));
+    } finally {
+      setIsDeletingId(null);
     }
   };
 
   if (loading) {
-    return <div className="p-4 bg-white rounded-lg shadow animate-pulse h-64"></div>;
+    return (
+      <div className="h-155 rounded-3xl border border-emerald-100 bg-white/80 p-6 shadow-sm animate-pulse">
+        <div className="h-5 w-40 rounded bg-emerald-100" />
+        <div className="mt-3 h-3 w-64 rounded bg-slate-100" />
+        <div className="mt-8 space-y-3">
+          <div className="h-14 rounded-2xl bg-slate-100" />
+          <div className="h-14 rounded-2xl bg-slate-100" />
+          <div className="h-14 rounded-2xl bg-slate-100" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col h-[500px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 bg-emerald-50/50">
-        <h3 className="font-semibold text-gray-900">Community Chat</h3>
-        <p className="text-sm text-gray-500">Discuss meal plans and share ideas!</p>
+    <div className="flex h-155 flex-col overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-[0_20px_55px_-30px_rgba(3,105,96,0.55)]">
+      <div className="border-b border-emerald-100 bg-linear-to-r from-emerald-50 via-cyan-50 to-lime-50 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Community Chat</h3>
+            <p className="text-sm text-slate-600">Share meal ideas, ask questions, and help each other.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void fetchMessages(false)}
+            className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 transition hover:bg-emerald-50"
+          >
+            Refresh
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">Messages</p>
+            <p className="text-base font-bold text-slate-800">{messages.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">Participants</p>
+            <p className="text-base font-bold text-slate-800">{participantsCount}</p>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">Last Activity</p>
+            <p className="text-base font-bold text-slate-800">{latestMessageTime}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {errorMessage && (
+        <div className="border-b border-rose-100 bg-rose-50 px-5 py-2 text-xs font-semibold text-rose-700">
+          {errorMessage}
+        </div>
+      )}
+
+      <div
+        ref={listRef}
+        className="flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fffc_100%)] p-5"
+      >
         {messages.length === 0 ? (
-          <p className="text-center text-gray-500 text-sm mt-10">No messages yet. Start the conversation!</p>
+          <div className="mt-16 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+            <p className="text-sm font-medium text-slate-500">No messages yet. Start the conversation!</p>
+          </div>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.user._id === user?.id; // Assuming user.id matches
+            const isMe = msg.user._id === currentUserId;
+            const isEditableNow = isMe && isWithinEditWindow(msg.createdAt);
+            const isEditing = editingMessageId === msg._id;
+            const secondsLeft = getRemainingSeconds(msg.createdAt);
+
             return (
-              <div key={msg._id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="text-xs font-medium text-gray-500">{msg.user.name}</span>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+              <div key={msg._id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                {!isMe && (
+                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-700">
+                    {getInitials(msg.user.name)}
+                  </div>
+                )}
+
+                <div className={`max-w-[82%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500">{msg.user.name}</span>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      {msg.user.role}
+                    </span>
+                    {msg.editedAt ? (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">edited</span>
+                    ) : null}
+                  </div>
+
+                  {isEditing ? (
+                    <div className="w-full rounded-2xl border border-emerald-200 bg-white p-3 shadow-sm">
+                      <textarea
+                        value={editText}
+                        maxLength={280}
+                        onChange={(event) => setEditText(event.target.value)}
+                        className="min-h-20 w-full rounded-xl border border-slate-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                        <p>{editText.length}/280</p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={cancelEditing}
+                            className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-600"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void submitEdit(msg._id)}
+                            disabled={isUpdating}
+                            className="rounded-full bg-emerald-600 px-3 py-1 font-semibold text-white disabled:opacity-60"
+                          >
+                            {isUpdating ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+                        isMe
+                          ? 'rounded-tr-md bg-emerald-600 text-white'
+                          : 'rounded-tl-md border border-slate-200 bg-white text-slate-800'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  )}
+
+                  {isMe && !isEditing && (
+                    <div className="mt-1 flex items-center gap-2 text-[11px] font-semibold">
+                      {isEditableNow ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEditing(msg)}
+                            className="text-emerald-700 hover:text-emerald-800"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(msg._id)}
+                            disabled={isDeletingId === msg._id}
+                            className="text-rose-600 hover:text-rose-700 disabled:opacity-60"
+                          >
+                            {isDeletingId === msg._id ? 'Deleting...' : 'Delete'}
+                          </button>
+                          <span className="text-slate-400">{secondsLeft}s left</span>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">Edit window expired</span>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div
-                  className={`px-4 py-2 rounded-2xl max-w-[80%] text-sm ${
-                    isMe
-                      ? 'bg-emerald-600 text-white rounded-tr-none'
-                      : 'bg-gray-100 text-gray-800 rounded-tl-none'
-                  }`}
-                >
-                  {msg.text}
-                </div>
+
+                {isMe && (
+                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white">
+                    {getInitials(msg.user.name)}
+                  </div>
+                )}
               </div>
             );
           })
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-gray-100 bg-gray-50">
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
+      <div className="border-t border-emerald-100 bg-white p-4">
+        <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-1 px-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            placeholder="Share your meal tip, question, or recipe idea..."
+            maxLength={280}
+            className="flex-1 rounded-full border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <button
             type="submit"
-            disabled={!newMessage.trim()}
-            className="px-6 py-2 bg-emerald-600 text-white rounded-full text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={!newMessage.trim() || isSending}
+            className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Send
+            {isSending ? 'Sending...' : 'Send'}
           </button>
         </form>
+        <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-slate-500">
+          <p>English bad words are restricted. Keep messages respectful.</p>
+          <p>{newMessage.length}/280</p>
+        </div>
       </div>
     </div>
   );

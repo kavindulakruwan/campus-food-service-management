@@ -9,6 +9,8 @@ export interface ChatMessage {
   };
   text: string;
   createdAt: string;
+  updatedAt?: string;
+  editedAt?: string | null;
 }
 
 export const getMessages = async () => {
@@ -18,6 +20,16 @@ export const getMessages = async () => {
 
 export const postMessage = async (text: string) => {
   const response = await axiosClient.post<ChatMessage>('/chat', { text });
+  return response.data;
+};
+
+export const updateMessage = async (id: string, text: string) => {
+  const response = await axiosClient.patch<ChatMessage>(`/chat/${id}`, { text });
+  return response.data;
+};
+
+export const deleteMessage = async (id: string) => {
+  const response = await axiosClient.delete<{ success: boolean; id: string }>(`/chat/${id}`);
   return response.data;
 };
 

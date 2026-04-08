@@ -1,4 +1,10 @@
 const ChatMessage = require('../models/ChatMessage');
+const { hasBlockedWord } = require('../utils/chatModeration');
+
+const MAX_MESSAGE_LENGTH = 280;
+const EDIT_WINDOW_MS = 30 * 1000;
+
+const isOutsideEditWindow = (createdAt) => Date.now() - new Date(createdAt).getTime() > EDIT_WINDOW_MS;
 
 exports.getMessages = async (req, res) => {
   try {
@@ -16,22 +22,100 @@ exports.getMessages = async (req, res) => {
 exports.postMessage = async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text || text.trim() === '') {
+    const cleanedText = typeof text === 'string' ? text.trim() : '';
+
+    if (!cleanedText) {
       return res.status(400).json({ message: 'Message text is required' });
+    }
+
+    if (cleanedText.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or less` });
+    }
+
+    if (hasBlockedWord(cleanedText)) {
+      return res.status(400).json({ message: 'Message contains restricted language' });
     }
 
     const newMessage = new ChatMessage({
       user: req.user.id,
-      text: text.trim(),
+      text: cleanedText,
     });
 
     const savedMessage = await newMessage.save();
     await savedMessage.populate('user', 'name role');
-    
+
     res.status(201).json(savedMessage);
   } catch (err) {
     console.error('Error posting chat message:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.updateMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    const cleanedText = typeof text === 'string' ? text.trim() : '';
+
+    if (!cleanedText) {
+      return res.status(400).json({ message: 'Message text is required' });
+    }
+
+    if (cleanedText.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or less` });
+    }
+
+    if (hasBlockedWord(cleanedText)) {
+      return res.status(400).json({ message: 'Message contains restricted language' });
+    }
+
+    const message = await ChatMessage.findById(id);
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    if (message.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'You can only update your own message' });
+    }
+
+    if (isOutsideEditWindow(message.createdAt)) {
+      return res.status(403).json({ message: 'You can only edit messages within 30 seconds' });
+    }
+
+    message.text = cleanedText;
+    message.editedAt = new Date();
+    const updatedMessage = await message.save();
+    await updatedMessage.populate('user', 'name role');
+
+    return res.json(updatedMessage);
+  } catch (err) {
+    console.error('Error updating chat message:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = await ChatMessage.findById(id);
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    if (message.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'You can only delete your own message' });
+    }
+
+    if (isOutsideEditWindow(message.createdAt)) {
+      return res.status(403).json({ message: 'You can only delete messages within 30 seconds' });
+    }
+
+    await ChatMessage.findByIdAndDelete(id);
+    return res.json({ success: true, id });
+  } catch (err) {
+    console.error('Error deleting chat message:', err);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
