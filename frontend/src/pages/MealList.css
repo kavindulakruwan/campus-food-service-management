@@ -1,0 +1,624 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap');
+
+.meal-page-wrap {
+  --meal-bg: #eaf4fa;
+  --meal-surface: #ffffff;
+  --meal-border: #c6d9e7;
+  --meal-text: #1f2f48;
+  --meal-muted: #51627b;
+  --meal-brand: #df7a1f;
+  --meal-brand-dark: #c76712;
+  --meal-accent: #1e5ab8;
+  font-family: 'Public Sans', sans-serif;
+  background: radial-gradient(circle at 12% 8%, #f2f8fd 0%, #e6f1f9 38%, #dbeaf4 100%);
+  border: 1px solid #c9dbe8;
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: none;
+  min-height: calc(100vh - 32px);
+  box-sizing: border-box;
+}
+
+.meal-page-wrap.container-fluid {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* ========== Recipe Header (Reference 2) ========== */
+
+.recipe-header-shell {
+  border: 1px solid #d5dec7;
+  background: #fbfcf8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.recipe-top-strip {
+  background: #b7c6b2;
+  color: #1f2c1d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recipe-mini-links {
+  display: flex;
+  gap: 12px;
+}
+
+.recipe-mini-search {
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+.recipe-main-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8ede1;
+  background: #ffffff;
+}
+
+.recipe-logo-mark {
+  font-size: 20px;
+}
+
+.recipe-logo-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: #2f3d2d;
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+.recipe-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recipe-nav-links button {
+  border: none;
+  background: transparent;
+  color: #39473a;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.recipe-nav-links button:hover {
+  background: #edf2e7;
+  color: #273226;
+}
+
+.recipe-headline {
+  text-align: center;
+  padding: 14px 12px;
+  background: #f7f5ef;
+  color: #2e332a;
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.meal-user-note {
+  text-align: center;
+  color: #5a6c53;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 0 10px;
+}
+
+/* ========== Legacy Hero ========== */
+
+.mealie-hero {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.mealie-brand-block {
+  min-height: 280px;
+  border-radius: 22px;
+  border: 1px solid #c7d7e6;
+  background: rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.mealie-icon {
+  font-size: 86px;
+  line-height: 1;
+  filter: saturate(130%);
+}
+
+.mealie-brand-name {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  color: #3b4a60;
+  font-weight: 800;
+}
+
+.mealie-preview-panel {
+  border-radius: 14px;
+  border: 1px solid #c6d8e6;
+  background: #fdfefe;
+  box-shadow: 0 18px 34px rgba(30, 62, 99, 0.12);
+  overflow: hidden;
+  min-height: 280px;
+}
+
+.mealie-preview-topbar {
+  height: 38px;
+  background: linear-gradient(90deg, #de7a20 0%, #ef8f3b 100%);
+  color: #fff7ee;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.mealie-preview-grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.mealie-preview-tile {
+  height: 94px;
+  border-radius: 12px;
+  border: 1px solid #c8d8e8;
+  background-size: cover;
+  background-position: center;
+}
+
+.tile-a {
+  background-image: linear-gradient(135deg, #f0ab79 0%, #d4652e 100%);
+}
+
+.tile-b {
+  background-image: linear-gradient(135deg, #f4d68b 0%, #e29a22 100%);
+}
+
+.tile-c {
+  background-image: linear-gradient(135deg, #bcd8f8 0%, #5288d7 100%);
+}
+
+.tile-d {
+  background-image: linear-gradient(135deg, #b4d7b5 0%, #4f9f53 100%);
+}
+
+.mealie-pill-headline {
+  max-width: 940px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid #c6d7e6;
+  border-radius: 999px;
+  text-align: center;
+  padding: 18px 28px;
+  font-size: clamp(1.3rem, 2.2vw, 2rem);
+  font-weight: 800;
+  color: #34445a;
+}
+
+
+
+.meal-page-intro {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.meal-kicker {
+  display: inline-block;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9f7618;
+  background: #fff8e5;
+  border: 1px solid #f0dca8;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.meal-page-title {
+  font-size: clamp(2rem, 2.8vw, 2.8rem);
+  font-weight: 800;
+  color: var(--meal-text);
+}
+
+.meal-page-subtitle {
+  color: var(--meal-muted);
+  font-size: 1.05rem;
+}
+
+.meal-filter-card {
+  border: 1px solid var(--meal-border);
+  border-radius: 16px;
+  background: var(--meal-surface);
+  box-shadow: 0 10px 25px rgba(20, 34, 76, 0.08);
+}
+
+.meal-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.meal-left-sidebar {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--meal-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(16, 42, 84, 0.09);
+  position: sticky;
+  top: 96px;
+}
+
+.meal-side-title {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4f5e77;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.meal-side-user {
+  font-size: 1.1rem;
+  color: #213553;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.meal-side-group {
+  margin-bottom: 10px;
+}
+
+.meal-content-area {
+  min-width: 0;
+}
+
+.meal-filter-input {
+  border-radius: 12px;
+  border: 1px solid #cdd6e7;
+  padding: 11px 12px;
+  font-weight: 500;
+}
+
+.meal-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.meal-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  line-height: 1;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.meal-search-input-wrap .meal-search-field {
+  padding-left: 46px !important;
+}
+
+.meal-filter-input:focus {
+  border-color: #8ca1d9;
+  box-shadow: 0 0 0 0.18rem rgba(26, 47, 107, 0.15);
+}
+
+.meal-clear-btn {
+  background: #f2f4f9;
+  color: #2f426f;
+  border: 1px solid #cdd6e8;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.meal-clear-btn:hover {
+  background: #e7ecf6;
+}
+
+.meal-card {
+  border: 1px solid #d8e0ee;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #ffffff;
+}
+
+.meal-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px rgba(14, 28, 70, 0.14) !important;
+}
+
+.meal-card .card-title {
+  color: var(--meal-text);
+  font-weight: 700;
+}
+
+.meal-description {
+  color: var(--meal-muted);
+  min-height: 48px;
+}
+
+.meal-price {
+  color: #152e67;
+  font-size: 1.08rem;
+}
+
+.meal-btn-primary {
+  background: linear-gradient(135deg, var(--meal-brand), #2a4ea2);
+  border: none;
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.meal-btn-primary:hover {
+  background: linear-gradient(135deg, var(--meal-brand-dark), #1f3f87);
+  color: #fff;
+}
+
+.meal-btn-secondary {
+  background: #ffffff;
+  border: 1px solid #ced7ea;
+  color: #1f3368;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.meal-btn-secondary:hover {
+  background: #f2f6ff;
+  color: #162a5a;
+}
+
+.meal-fav-btn {
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d7deec;
+}
+
+.meal-fav-btn:hover {
+  background: #ffffff;
+}
+
+.meal-fav-active,
+.meal-fav-idle {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.meal-fav-active {
+  color: var(--meal-accent);
+}
+
+.meal-fav-idle {
+  color: #95a0bb;
+}
+
+[data-theme='dark'] .meal-page-wrap {
+  background: radial-gradient(circle at 12% 8%, #1b2a3f 0%, #142237 34%, #101a2c 100%);
+  border-color: #273453;
+}
+
+[data-theme='dark'] .recipe-header-shell {
+  border-color: #3f4f45;
+  background: #141f1a;
+}
+
+[data-theme='dark'] .recipe-top-strip {
+  background: #4f6651;
+  color: #eef7eb;
+}
+
+[data-theme='dark'] .recipe-main-nav {
+  background: #16241c;
+  border-bottom-color: #304339;
+}
+
+[data-theme='dark'] .recipe-logo-text {
+  color: #e6f2e3;
+}
+
+[data-theme='dark'] .recipe-nav-links button {
+  color: #c9ddc8;
+}
+
+[data-theme='dark'] .recipe-nav-links button:hover {
+  background: #2a3c31;
+  color: #f0f8ef;
+}
+
+[data-theme='dark'] .recipe-headline {
+  background: #17261d;
+  color: #e7f4e5;
+}
+
+[data-theme='dark'] .meal-user-note {
+  color: #a9c6a8;
+}
+
+[data-theme='dark'] .mealie-brand-block {
+  background: rgba(20, 32, 51, 0.72);
+  border-color: #2f4667;
+}
+
+[data-theme='dark'] .mealie-brand-name {
+  color: #e7eefc;
+}
+
+[data-theme='dark'] .mealie-preview-panel {
+  background: #111d31;
+  border-color: #30486a;
+}
+
+[data-theme='dark'] .mealie-preview-topbar {
+  background: linear-gradient(90deg, #dd812f 0%, #f09c4f 100%);
+}
+
+[data-theme='dark'] .mealie-preview-tile {
+  border-color: #34507a;
+}
+
+[data-theme='dark'] .mealie-pill-headline {
+  background: rgba(17, 29, 49, 0.74);
+  border-color: #355077;
+  color: #e8f0ff;
+}
+
+[data-theme='dark'] .meal-user-note {
+  color: #b9cae8;
+}
+
+[data-theme='dark'] .meal-page-title {
+  color: #f3f7ff;
+}
+
+[data-theme='dark'] .meal-page-subtitle {
+  color: #c0cee9;
+}
+
+[data-theme='dark'] .meal-filter-card {
+  background: #111b32;
+  border-color: #2a3b63;
+}
+
+[data-theme='dark'] .meal-left-sidebar {
+  background: rgba(18, 29, 50, 0.9);
+  border-color: #2b4166;
+}
+
+[data-theme='dark'] .meal-side-title {
+  color: #9fb3d6;
+}
+
+[data-theme='dark'] .meal-side-user {
+  color: #e8f0ff;
+}
+
+[data-theme='dark'] .meal-filter-input {
+  background: #192542;
+  border-color: #324878;
+  color: #edf3ff;
+}
+
+[data-theme='dark'] .meal-search-icon {
+  color: #b9c8e6;
+}
+
+[data-theme='dark'] .meal-filter-input::placeholder {
+  color: #aab9d8;
+}
+
+[data-theme='dark'] .meal-clear-btn {
+  background: #1a2745;
+  border-color: #355089;
+  color: #e8efff;
+}
+
+[data-theme='dark'] .meal-clear-btn:hover {
+  background: #22345c;
+}
+
+[data-theme='dark'] .meal-card {
+  background: #0f1a33;
+  border-color: #2a3c66;
+}
+
+[data-theme='dark'] .meal-card .card-title {
+  color: #f4f8ff;
+}
+
+[data-theme='dark'] .meal-description {
+  color: #c2d0ea;
+}
+
+[data-theme='dark'] .meal-price {
+  color: #ffd67a;
+}
+
+[data-theme='dark'] .meal-btn-secondary {
+  background: #182748;
+  border-color: #37508a;
+  color: #f2f6ff;
+}
+
+[data-theme='dark'] .meal-btn-secondary:hover {
+  background: #20345f;
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .meal-page-wrap {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .recipe-main-nav {
+    flex-wrap: wrap;
+  }
+
+  .recipe-logo-text {
+    margin-right: 0;
+  }
+
+  .mealie-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-left-sidebar {
+    position: static;
+  }
+
+  .mealie-brand-block,
+  .mealie-preview-panel {
+    min-height: 220px;
+  }
+
+  .meal-page-subtitle {
+    font-size: 0.95rem;
+  }
+}

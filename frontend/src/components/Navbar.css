@@ -1,0 +1,346 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap');
+
+body.has-side-nav .App {
+  padding-left: 250px;
+}
+
+.side-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100vh;
+  background: linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
+  border-right: 1px solid #dce4f0;
+  box-shadow: 8px 0 20px rgba(15, 23, 42, 0.08);
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px;
+  z-index: 1100;
+}
+
+.side-brand {
+  margin-bottom: 16px;
+  padding: 6px;
+}
+
+.side-brand .brand-title {
+  font-size: 30px;
+}
+
+.side-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.side-profile-card {
+  margin-top: 14px;
+  border: 1px solid #d5dff0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.side-profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2f7ee4 0%, #df7a1f 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.side-profile-meta {
+  min-width: 0;
+}
+
+.side-profile-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1f2d46;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-profile-role {
+  font-size: 11px;
+  color: #667a9b;
+  font-weight: 700;
+}
+
+.side-nav-link {
+  text-decoration: none;
+  color: #334155;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: 0.2s ease;
+}
+
+.side-nav-link:hover {
+  color: #15386d;
+  background: #edf2fa;
+}
+
+.side-nav-link.active {
+  color: #0f4cb3;
+  background: #e9f0ff;
+}
+
+.side-nav-footer {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.side-nav-footer .theme-toggle-btn,
+.side-nav-footer .app-logout-btn {
+  flex: 1;
+}
+
+.app-navbar {
+  background: linear-gradient(90deg, #f7f9fc 0%, #eef3f9 100%);
+  border-bottom: 1px solid #dce4f0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.app-navbar .container {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #0f4cb3 0%, #2e77de 60%, #5ea6f6 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  box-shadow: 0 8px 16px rgba(25, 78, 163, 0.28);
+}
+
+.brand-text-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.brand-title {
+  font-size: 29px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #5f6e85;
+}
+
+.app-nav-links .nav-link,
+.app-nav-actions .nav-link {
+  color: #334155;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: 0.2s ease;
+}
+
+.app-nav-links .nav-link.active,
+.app-nav-actions .nav-link.active {
+  color: #0f4cb3;
+  background: #e9f0ff;
+}
+
+.app-nav-links .nav-link:hover,
+.app-nav-actions .nav-link:hover {
+  color: #15386d;
+  background: #edf2fa;
+}
+
+.app-nav-actions {
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-toggle-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #cfd9ea;
+  background: #ffffff;
+  color: #1d2f5f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.theme-toggle-btn:hover {
+  background: #eef3ff;
+}
+
+.app-logout-btn {
+  border: 1px solid #e65a67;
+  color: #cc2f41;
+  background: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+
+.app-logout-btn:hover {
+  background: #fff2f4;
+  color: #ac1f31;
+}
+
+[data-theme='dark'] .app-navbar {
+  background: linear-gradient(90deg, #121827 0%, #0f1421 100%);
+  border-bottom: 1px solid #293145;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .side-navbar {
+  background: linear-gradient(180deg, #121827 0%, #0f1421 100%);
+  border-right: 1px solid #293145;
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .side-profile-card {
+  background: #182236;
+  border-color: #334766;
+}
+
+[data-theme='dark'] .side-profile-name {
+  color: #e5efff;
+}
+
+[data-theme='dark'] .side-profile-role {
+  color: #9fb3d8;
+}
+
+[data-theme='dark'] .side-nav-link {
+  color: #d4def6;
+}
+
+[data-theme='dark'] .side-nav-link:hover {
+  color: #ecf2ff;
+  background: #1b2842;
+}
+
+[data-theme='dark'] .side-nav-link.active {
+  color: #9ec1ff;
+  background: #1a2743;
+}
+
+[data-theme='dark'] .brand-title {
+  color: #f8fbff;
+}
+
+[data-theme='dark'] .brand-subtitle {
+  color: #94a3c5;
+}
+
+[data-theme='dark'] .app-nav-links .nav-link,
+[data-theme='dark'] .app-nav-actions .nav-link {
+  color: #d4def6;
+}
+
+[data-theme='dark'] .app-nav-links .nav-link.active,
+[data-theme='dark'] .app-nav-actions .nav-link.active {
+  color: #9ec1ff;
+  background: #1a2743;
+}
+
+[data-theme='dark'] .app-nav-links .nav-link:hover,
+[data-theme='dark'] .app-nav-actions .nav-link:hover {
+  color: #ecf2ff;
+  background: #1b2842;
+}
+
+[data-theme='dark'] .theme-toggle-btn {
+  border: 1px solid #314062;
+  background: #16233e;
+  color: #ffd166;
+}
+
+[data-theme='dark'] .theme-toggle-btn:hover {
+  background: #1d2d4d;
+}
+
+[data-theme='dark'] .app-logout-btn {
+  border-color: #c25a6c;
+  color: #f58ea0;
+  background: #1c1520;
+}
+
+[data-theme='dark'] .app-logout-btn:hover {
+  background: #2a1d2d;
+  color: #ffafbd;
+}
+
+@media (max-width: 992px) {
+  body.has-side-nav .App {
+    padding-left: 0;
+  }
+
+  .side-navbar {
+    position: static;
+    width: auto;
+    height: auto;
+    border-right: none;
+    box-shadow: none;
+    border-bottom: 1px solid #dce4f0;
+  }
+
+  .side-nav-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .app-navbar .container {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .brand-title {
+    font-size: 22px;
+  }
+
+  .brand-subtitle {
+    font-size: 10px;
+  }
+
+  .app-nav-links,
+  .app-nav-actions {
+    padding-top: 12px;
+    gap: 4px;
+  }
+}
