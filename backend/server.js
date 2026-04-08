@@ -2,6 +2,7 @@
 require('express-async-errors')
 
 const express = require('express')
+const net = require('net')
 const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
@@ -60,6 +61,36 @@ app.use((err, _req, res, _next) => {
   res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Server error' })
 })
 
+const findAvailablePort = (startPort, maxAttempts = 20) =>
+  new Promise((resolve, reject) => {
+    let attempts = 0
+    let currentPort = startPort
+
+    const tryPort = () => {
+      const tester = net.createServer()
+
+      tester.once('error', (error) => {
+        tester.close()
+
+        if (error.code === 'EADDRINUSE' && attempts < maxAttempts - 1) {
+          attempts += 1
+          currentPort += 1
+          return tryPort()
+        }
+
+        return reject(error)
+      })
+
+      tester.once('listening', () => {
+        tester.close(() => resolve(currentPort))
+      })
+
+      tester.listen(currentPort)
+    }
+
+    tryPort()
+  })
+
 const start = async () => {
   try {
     await connectDB()
@@ -70,9 +101,14 @@ const start = async () => {
     console.warn(`[WARN] ${error.message}`)
   }
 
-  app.listen(process.env.PORT || 5000, () =>
-    console.log(`[SERVER] http://localhost:${process.env.PORT || 5000}`)
-  )
+  const requestedPort = Number(process.env.PORT) || 5000
+  const port = await findAvailablePort(requestedPort)
+
+  if (port !== requestedPort) {
+    console.warn(`[WARN] Port ${requestedPort} is busy. Using port ${port} instead.`)
+  }
+
+  app.listen(port, () => console.log(`[SERVER] http://localhost:${port}`))
 }
 start().catch((error) => {
   console.error('[FATAL] Server startup failed', error.message)
