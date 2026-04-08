@@ -82,7 +82,7 @@ const DashboardLayout = () => {
                   </>
                 )}
               </NavLink>
-            ))}
+              ))}
           </nav>
         </div>
 

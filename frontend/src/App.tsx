@@ -17,6 +17,7 @@ import RecommendationsPage from './pages/student/RecommendationsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
+import RoleRoute from './routes/RoleRoute'
 import DashboardLayout from './components/ui/DashboardLayout'
 
 function App() {
@@ -44,7 +45,14 @@ function App() {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
-            <Route path="/admin" element={<AdminHomePage />} />
+            <Route
+              path="admin"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminHomePage />
+                </RoleRoute>
+              )}
+            />
           </Route>
         </Route>
 

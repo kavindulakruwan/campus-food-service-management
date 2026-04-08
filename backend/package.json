@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "make-admin": "node src/scripts/makeAdmin.js",
     "lint": "eslint src --ext .js",
     "lint:fix": "eslint src --ext .js --fix",
     "test": "jest --runInBand --detectOpenHandles",

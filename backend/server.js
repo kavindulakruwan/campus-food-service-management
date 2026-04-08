@@ -12,6 +12,7 @@ const authRoutes = require('./src/routes/auth.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
 
+const adminRoutes = require('./src/routes/admin.routes')
 const app = express()
 
 app.use(helmet())
@@ -44,6 +45,16 @@ app.use('/api/auth', dbCheckMiddleware, authRoutes)
 app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
 app.use('/api/chat', dbCheckMiddleware, chatRoutes)
 
+
+app.use('/api/admin', (req, res, next) => {
+  if (!getMongoStatus().connected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable. Check MONGO_URI and Atlas IP access list.',
+    })
+  }
+  return next()
+}, adminRoutes)
 app.use((err, _req, res, _next) => {
   console.error(err)
   res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Server error' })
