@@ -10,6 +10,11 @@ const chatMessageSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
+    maxlength: 280,
+  },
+  editedAt: {
+    type: Date,
+    default: null,
   },
 }, { timestamps: true });
 

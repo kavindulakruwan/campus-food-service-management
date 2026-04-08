@@ -10,7 +10,6 @@ import {
   updateMealPlan,
 } from '../../api/mealPlan.api'
 import type { MealPlanItem, MealTime } from '../../types/mealPlan'
-import CommunityChat from '../../components/ui/CommunityChat'
 import { MealPlannerChatbot } from '../../components/ui/MealPlannerChatbot'
 import './MealPlannerPage.css'
 
@@ -89,7 +88,6 @@ const MealPlannerPage = () => {
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [overwriteOnCopy, setOverwriteOnCopy] = useState(false)
-  const [showChat, setShowChat] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [editor, setEditor] = useState<EditorState>(() =>
@@ -326,9 +324,6 @@ const MealPlannerPage = () => {
 
       <div className="meal-planner-toolbar">
         <div className="week-controls">
-          <button type="button" onClick={() => setShowChat(!showChat)}>
-            {showChat ? 'Hide Chat' : 'Show Chat'}
-          </button>
           <button type="button" onClick={() => setWeekStart((prev) => addDays(prev, -7))}>
             Previous week
           </button>
@@ -368,11 +363,6 @@ const MealPlannerPage = () => {
       )}
 
       <div className="meal-planner-content">
-        {showChat && (
-          <div className="community-chat-wrapper" style={{ gridColumn: '1 / -1' }}>
-            <CommunityChat />
-          </div>
-        )}
         <div className="planner-grid-card">
           <div className="planner-grid-head">
             <h3>Weekly meal grid</h3>
