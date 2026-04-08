@@ -1,15 +1,18 @@
-require('dotenv').config()
+﻿require('dotenv').config()
 require('express-async-errors')
 
-const express    = require('express')
-const cors       = require('cors')
-const helmet     = require('helmet')
-const morgan     = require('morgan')
+const express = require('express')
+const cors = require('cors')
+const helmet = require('helmet')
+const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const { connectDB, getMongoStatus } = require('./src/config/db')
-const authRoutes = require('./src/routes/auth.routes')
-const adminRoutes = require('./src/routes/admin.routes')
 
+const authRoutes = require('./src/routes/auth.routes')
+const mealPlanRoutes = require('./src/routes/mealPlan.routes')
+const chatRoutes = require('./src/routes/chat.routes')
+
+const adminRoutes = require('./src/routes/admin.routes')
 const app = express()
 
 app.use(helmet())
@@ -28,7 +31,7 @@ app.get('/api/health', (_req, res) => {
   })
 })
 
-app.use('/api/auth', (req, res, next) => {
+const dbCheckMiddleware = (req, res, next) => {
   if (!getMongoStatus().connected) {
     return res.status(503).json({
       success: false,
@@ -36,7 +39,12 @@ app.use('/api/auth', (req, res, next) => {
     })
   }
   next()
-}, authRoutes)
+}
+
+app.use('/api/auth', dbCheckMiddleware, authRoutes)
+app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
+app.use('/api/chat', dbCheckMiddleware, chatRoutes)
+
 
 app.use('/api/admin', (req, res, next) => {
   if (!getMongoStatus().connected) {
@@ -47,8 +55,6 @@ app.use('/api/admin', (req, res, next) => {
   }
   return next()
 }, adminRoutes)
-
-// Global error handler
 app.use((err, _req, res, _next) => {
   console.error(err)
   res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Server error' })
@@ -58,13 +64,8 @@ const start = async () => {
   try {
     await connectDB()
   } catch (error) {
-    const allowStartWithoutDb =
-      process.env.ALLOW_START_WITHOUT_DB === 'true' || process.env.NODE_ENV !== 'production'
-
-    if (!allowStartWithoutDb) {
-      throw error
-    }
-
+    const allowStartWithoutDb = process.env.ALLOW_START_WITHOUT_DB === 'true' || process.env.NODE_ENV !== 'production'
+    if (!allowStartWithoutDb) throw error
     console.warn('[WARN] Starting server without MongoDB connection (development mode).')
     console.warn(`[WARN] ${error.message}`)
   }
@@ -74,7 +75,6 @@ const start = async () => {
   )
 }
 start().catch((error) => {
-  console.error('[FATAL] Server startup failed')
-  console.error(error.message)
+  console.error('[FATAL] Server startup failed', error.message)
   process.exit(1)
 })
