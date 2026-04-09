@@ -1,15 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { paymentApi } from '../../api/payment.api';
 
+interface PaymentUser {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+interface Payment {
+  _id: string;
+  user: PaymentUser;
+  order: string;
+  amount: number;
+  method: 'PayPal' | 'QRCode' | 'CreditCard';
+  status: 'Pending' | 'Completed' | 'Failed' | 'Refunded';
+  transactionId?: string;
+  receiptUrl?: string;
+  receiptSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const AdminPaymentDashboard: React.FC = () => {
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refundingId, setRefundingId] = useState<string | null>(null);
 
   const fetchPayments = () => {
     paymentApi.getAllPayments()
-      .then((res: any) => setPayments(res.data || []))
-      .catch((err: any) => console.error(err))
+      .then((res: { data: Payment[] }) => setPayments(res.data || []))
+      .catch((err: unknown) => {
+        if (typeof err === 'object' && err !== null && 'response' in err) {
+          const e = err as { response?: { data?: { message?: string } } };
+          console.error(e.response?.data?.message || 'Failed to fetch payments');
+        } else {
+          console.error(err);
+        }
+      })
       .finally(() => setLoading(false));
   };
 
@@ -24,8 +51,13 @@ const AdminPaymentDashboard: React.FC = () => {
     try {
       await paymentApi.refundPayment(id);
       fetchPayments(); // Refresh list
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to refund payment');
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const e = err as { response?: { data?: { message?: string } } };
+        alert(e.response?.data?.message || 'Failed to refund payment');
+      } else {
+        alert('Failed to refund payment');
+      }
     } finally {
       setRefundingId(null);
     }
