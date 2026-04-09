@@ -10,6 +10,9 @@ const cookieParser = require('cookie-parser')
 const { connectDB, getMongoStatus } = require('./src/config/db')
 
 const authRoutes = require('./src/routes/auth.routes')
+const adminRoutes = require('./src/routes/admin.routes')
+const paymentRoutes = require('./src/routes/payment.routes')
+const orderRoutes = require('./src/routes/order.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
 
@@ -56,6 +59,28 @@ app.use('/api/admin', (req, res, next) => {
   }
   return next()
 }, adminRoutes)
+
+app.use('/api/payments', (req, res, next) => {
+  if (!getMongoStatus().connected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable. Check MONGO_URI and Atlas IP access list.',
+    })
+  }
+  return next()
+}, paymentRoutes)
+
+app.use('/api/orders', (req, res, next) => {
+  if (!getMongoStatus().connected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable.',
+    })
+  }
+  return next()
+}, orderRoutes)
+
+// Global error handler
 app.use((err, _req, res, _next) => {
   console.error(err)
   res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Server error' })

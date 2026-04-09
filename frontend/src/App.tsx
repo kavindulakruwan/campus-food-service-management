@@ -14,8 +14,11 @@ import BudgetPage from './pages/student/BudgetPage'
 import RecipesPage from './pages/student/RecipesPage'
 import OrdersPage from './pages/student/OrdersPage'
 import PaymentsPage from './pages/student/PaymentsPage'
+import CheckoutPage from './pages/student/CheckoutPage'
+import DigitalReceiptPage from './pages/student/DigitalReceiptPage'
 import RecommendationsPage from './pages/student/RecommendationsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
+import AdminPaymentDashboard from './pages/admin/AdminPaymentDashboard'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import RoleRoute from './routes/RoleRoute'
@@ -45,13 +48,24 @@ function App() {
             <Route path="/budget" element={<BudgetPage />} />
             <Route path="/recipes" element={<RecipesPage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/payments/history" element={<PaymentsPage />} />
+            <Route path="/payments/receipt/:id" element={<DigitalReceiptPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route
               path="admin"
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminHomePage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="admin/payments"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminPaymentDashboard />
                 </RoleRoute>
               )}
             />

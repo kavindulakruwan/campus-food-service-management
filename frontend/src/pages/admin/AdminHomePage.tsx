@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getAdminDashboard } from '../../api/admin.api'
 
 interface RecentUser {
@@ -47,10 +48,18 @@ const AdminHomePage = () => {
 
   return (
     <section className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-widest text-orange-600">Admin Space</p>
-        <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-        <p className="text-slate-600">Only admin users can open this route and query admin APIs.</p>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-widest text-orange-600">Admin Space</p>
+          <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-600">Only admin users can open this route and query admin APIs.</p>
+        </div>
+        <Link 
+          to="/admin/payments" 
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+        >
+          Manage Payments & Refunds →
+        </Link>
       </header>
 
       {loading && <p className="text-slate-600">Loading admin metrics...</p>}
