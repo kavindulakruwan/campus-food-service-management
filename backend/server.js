@@ -1,4 +1,4 @@
-﻿require('dotenv').config()
+require('dotenv').config()
 require('express-async-errors')
 
 const express = require('express')
@@ -16,7 +16,6 @@ const orderRoutes = require('./src/routes/order.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
 
-const adminRoutes = require('./src/routes/admin.routes')
 const app = express()
 
 app.use(helmet())
