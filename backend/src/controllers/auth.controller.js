@@ -1,8 +1,24 @@
 const User = require('../models/User')
 const jwt  = require('jsonwebtoken')
 
+const getAccessSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET
+const getRefreshSecret = () => process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+
+const ensureJwtSecrets = () => {
+  const accessSecret = getAccessSecret()
+  const refreshSecret = getRefreshSecret()
+
+  if (!accessSecret || !refreshSecret) {
+    const error = new Error('JWT secrets are not configured. Set JWT_SECRET or JWT_ACCESS_SECRET and JWT_REFRESH_SECRET.')
+    error.statusCode = 500
+    throw error
+  }
+
+  return { accessSecret, refreshSecret }
+}
+
 const signToken = (id, role) =>
-  jwt.sign({ id, role }, process.env.JWT_ACCESS_SECRET, {
+  jwt.sign({ id, role }, ensureJwtSecrets().accessSecret, {
     expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
   })
 
@@ -18,6 +34,7 @@ const sendRefreshCookie = (res, token) => {
 // POST /api/auth/register
 exports.register = async (req, res) => {
   const { name, email, password } = req.body
+  const { refreshSecret } = ensureJwtSecrets()
 
   const exists = await User.findOne({ email })
   if (exists) return res.status(409).json({ success: false, message: 'Email already registered' })
@@ -25,7 +42,7 @@ exports.register = async (req, res) => {
   const user = await User.create({ name, email, password })
 
   const accessToken  = signToken(user._id, user.role)
-  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' })
+  const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' })
 
   sendRefreshCookie(res, refreshToken)
 
@@ -40,6 +57,7 @@ exports.register = async (req, res) => {
 // POST /api/auth/login
 exports.login = async (req, res) => {
   const { email, password } = req.body
+  const { refreshSecret } = ensureJwtSecrets()
 
   // +password re-includes the select:false field
   const user = await User.findOne({ email }).select('+password')
@@ -53,7 +71,7 @@ exports.login = async (req, res) => {
   }
 
   const accessToken  = signToken(user._id, user.role)
-  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' })
+  const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' })
 
   sendRefreshCookie(res, refreshToken)
 
