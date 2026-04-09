@@ -161,10 +161,10 @@ const AdminUserManagementPage = () => {
 
   return (
     <section className="space-y-6">
-      <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-700 px-6 py-8 text-white shadow-lg">
-        <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">Admin User & Profile</p>
+      <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-orange-600 px-6 py-8 text-white shadow-xl shadow-slate-300/20">
+        <p className="text-xs uppercase tracking-[0.3em] text-orange-100/80">Admin User & Profile</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight">User Management Control Center</h1>
-        <p className="mt-2 max-w-3xl text-sm text-cyan-100/90">
+        <p className="mt-2 max-w-3xl text-sm text-slate-100/90">
           View all users, search and filter, add or edit accounts, reset passwords, enable or disable users, and remove accounts.
         </p>
       </header>
