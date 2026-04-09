@@ -49,6 +49,18 @@ const recentActivity = [
 const DashboardPage = () => {
   const { user } = useAuth()
 
+  const resolvedModules = modules.map((module) => {
+    if (module.title === 'User & Profile' && user?.role === 'admin') {
+      return {
+        ...module,
+        path: '/admin/users',
+        summary: 'Admin user management: view, search, add, edit, reset, enable/disable, and delete users.',
+      }
+    }
+
+    return module
+  })
+
   return (
     <div className="flex flex-col gap-8 pb-8">
       {/* Welcome Banner */}
@@ -85,7 +97,7 @@ const DashboardPage = () => {
           </div>
           
           <div className="grid sm:grid-cols-2 gap-5">
-            {modules.map((module) => (
+            {resolvedModules.map((module) => (
               <article 
                 key={module.title} 
                 className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-slate-300"

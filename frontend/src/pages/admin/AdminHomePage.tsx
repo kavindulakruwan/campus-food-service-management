@@ -54,12 +54,20 @@ const AdminHomePage = () => {
           <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
           <p className="text-slate-600">Only admin users can open this route and query admin APIs.</p>
         </div>
-        <Link 
-          to="/admin/payments" 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
-        >
-          Manage Payments & Refunds →
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to="/admin/users"
+            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+          >
+            Manage Users →
+          </Link>
+          <Link 
+            to="/admin/payments" 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+          >
+            Manage Payments & Refunds →
+          </Link>
+        </div>
       </header>
 
       {loading && <p className="text-slate-600">Loading admin metrics...</p>}
