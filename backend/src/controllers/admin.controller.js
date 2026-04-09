@@ -1,4 +1,15 @@
 const User = require('../models/User')
+const MealPlan = require('../models/MealPlan')
+
+const parseDate = (value) => {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+const toDateKey = (date) => {
+  const iso = new Date(date).toISOString()
+  return iso.slice(0, 10)
+}
 
 const getDashboard = async (_req, res) => {
   const [users, students, admins, recentUsers] = await Promise.all([
@@ -38,6 +49,25 @@ const toAdminUser = (user) => ({
   bio: user.bio || '',
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
+})
+
+const toAdminMealPlan = (item) => ({
+  id: item._id.toString(),
+  date: toDateKey(item.date),
+  mealTime: item.mealTime,
+  mealName: item.mealName,
+  quantity: item.quantity,
+  notes: item.notes || '',
+  user: item.user && typeof item.user === 'object'
+    ? {
+        id: item.user._id?.toString?.() || item.user.id || '',
+        name: item.user.name || '',
+        email: item.user.email || '',
+        role: item.user.role || 'student',
+      }
+    : null,
+  createdAt: item.createdAt,
+  updatedAt: item.updatedAt,
 })
 
 const listUsers = async (req, res) => {
@@ -192,6 +222,93 @@ const deleteUser = async (req, res) => {
   return res.json({ success: true, message: 'User deleted successfully' })
 }
 
+const listMealPlans = async (req, res) => {
+  const {
+    search = '',
+    mealTime = 'all',
+    date = '',
+    page = '1',
+    limit = '20',
+  } = req.query
+
+  const safePage = Math.max(Number(page) || 1, 1)
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100)
+
+  const query = {}
+
+  if (mealTime !== 'all') {
+    query.mealTime = mealTime
+  }
+
+  if (date) {
+    const targetDate = parseDate(date)
+    const nextDay = new Date(targetDate)
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+    query.date = { $gte: targetDate, $lt: nextDay }
+  }
+
+  if (search) {
+    query.$or = [
+      { mealName: { $regex: search, $options: 'i' } },
+      { notes: { $regex: search, $options: 'i' } },
+    ]
+  }
+
+  const [mealPlans, total] = await Promise.all([
+    MealPlan.find(query)
+      .populate('user', 'name email role')
+      .sort({ date: -1, createdAt: -1 })
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit),
+    MealPlan.countDocuments(query),
+  ])
+
+  return res.json({
+    success: true,
+    data: {
+      mealPlans: mealPlans.map(toAdminMealPlan),
+      pagination: {
+        total,
+        page: safePage,
+        limit: safeLimit,
+        pages: Math.ceil(total / safeLimit) || 1,
+      },
+    },
+  })
+}
+
+const updateMealPlan = async (req, res) => {
+  const { id } = req.params
+  const payload = { ...req.body }
+
+  if (payload.date) {
+    payload.date = parseDate(payload.date)
+  }
+
+  const updated = await MealPlan.findByIdAndUpdate(id, payload, { new: true, runValidators: true }).populate('user', 'name email role')
+
+  if (!updated) {
+    return res.status(404).json({ success: false, message: 'Meal plan not found' })
+  }
+
+  return res.json({
+    success: true,
+    message: 'Meal plan updated successfully',
+    data: toAdminMealPlan(updated),
+  })
+}
+
+const deleteMealPlan = async (req, res) => {
+  const { id } = req.params
+
+  const deleted = await MealPlan.findByIdAndDelete(id)
+  if (!deleted) {
+    return res.status(404).json({ success: false, message: 'Meal plan not found' })
+  }
+
+  return res.json({ success: true, message: 'Meal plan deleted successfully' })
+}
+
 module.exports = {
   getDashboard,
   listUsers,
@@ -200,4 +317,7 @@ module.exports = {
   resetUserPassword,
   setUserStatus,
   deleteUser,
+  listMealPlans,
+  updateMealPlan,
+  deleteMealPlan,
 }

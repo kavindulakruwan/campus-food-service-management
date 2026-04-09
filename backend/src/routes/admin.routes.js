@@ -9,6 +9,9 @@ const {
 	resetUserPassword,
 	setUserStatus,
 	deleteUser,
+	listMealPlans,
+	updateMealPlan,
+	deleteMealPlan,
 } = require('../controllers/admin.controller')
 const {
 	createUserSchema,
@@ -26,5 +29,8 @@ router.patch('/users/:id', authenticate, authorizeRoles('admin'), validate(updat
 router.patch('/users/:id/reset-password', authenticate, authorizeRoles('admin'), validate(resetPasswordSchema), resetUserPassword)
 router.patch('/users/:id/status', authenticate, authorizeRoles('admin'), validate(updateUserStatusSchema), setUserStatus)
 router.delete('/users/:id', authenticate, authorizeRoles('admin'), deleteUser)
+router.get('/meal-plans', authenticate, authorizeRoles('admin'), listMealPlans)
+router.patch('/meal-plans/:id', authenticate, authorizeRoles('admin'), updateMealPlan)
+router.delete('/meal-plans/:id', authenticate, authorizeRoles('admin'), deleteMealPlan)
 
 module.exports = router

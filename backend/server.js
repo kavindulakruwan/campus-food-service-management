@@ -14,6 +14,7 @@ const adminRoutes = require('./src/routes/admin.routes')
 const paymentRoutes = require('./src/routes/payment.routes')
 const orderRoutes = require('./src/routes/order.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
+const mealItemRoutes = require('./src/routes/mealItem.routes')
 const chatRoutes = require('./src/routes/chat.routes')
 const userRoutes = require('./src/routes/user.routes')
 
@@ -49,6 +50,7 @@ const dbCheckMiddleware = (req, res, next) => {
 app.use('/api/auth', dbCheckMiddleware, authRoutes)
 app.use('/api/users', dbCheckMiddleware, userRoutes)
 app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
+app.use('/api/meals', dbCheckMiddleware, mealItemRoutes)
 app.use('/api/chat', dbCheckMiddleware, chatRoutes)
 
 

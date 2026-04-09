@@ -4,6 +4,7 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import DashboardPage from './pages/student/DashboardPage'
 import ProfilePage from './pages/student/ProfilePage'
+import MealsPage from './pages/student/MealsPage'
 import MealPlannerPage from './pages/student/MealPlannerPage'
 import CommunityChatPage from './pages/student/CommunityChatPage'
 import MealManagementPage from './pages/student/MealManagementPage'
@@ -18,6 +19,7 @@ import CheckoutPage from './pages/student/CheckoutPage'
 import DigitalReceiptPage from './pages/student/DigitalReceiptPage'
 import RecommendationsPage from './pages/student/RecommendationsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
+import AdminMealManagementPage from './pages/admin/AdminMealManagementPage'
 import AdminPaymentDashboard from './pages/admin/AdminPaymentDashboard'
 import AdminUserManagementPage from './pages/admin/AdminUserManagementPage'
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -40,6 +42,7 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/meals" element={<MealsPage />} />
             <Route path="/meal-plans" element={<MealPlannerPage />} />
             <Route path="/community-chat" element={<CommunityChatPage />} />
             <Route path="/meal-management" element={<MealManagementPage />} />
@@ -67,6 +70,14 @@ function App() {
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminUserManagementPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="admin/meal-management"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminMealManagementPage />
                 </RoleRoute>
               )}
             />

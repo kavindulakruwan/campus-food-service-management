@@ -66,6 +66,31 @@ export interface AdminUpdateUserInput {
   avatarUrl?: string
 }
 
+export interface AdminMealPlanItem {
+  id: string
+  date: string
+  mealTime: 'breakfast' | 'lunch' | 'dinner'
+  mealName: string
+  quantity: number
+  notes: string
+  user: {
+    id: string
+    name: string
+    email: string
+    role: 'student' | 'admin'
+  } | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminMealPlanFilters {
+  search?: string
+  mealTime?: 'all' | 'breakfast' | 'lunch' | 'dinner'
+  date?: string
+  page?: number
+  limit?: number
+}
+
 export interface AdminListFilters {
   search?: string
   role?: 'all' | 'student' | 'admin'
@@ -93,3 +118,12 @@ export const setAdminUserStatus = (userId: string, isActive: boolean) =>
 
 export const deleteAdminUser = (userId: string) =>
   api.delete<{ success: boolean; message: string }>(`/admin/users/${userId}`)
+
+export const getAdminMealPlans = (filters: AdminMealPlanFilters) =>
+  api.get<{ success: boolean; data: { mealPlans: AdminMealPlanItem[]; pagination: { total: number; page: number; limit: number; pages: number } } }>('/admin/meal-plans', { params: filters })
+
+export const updateAdminMealPlan = (mealPlanId: string, payload: Partial<Omit<AdminMealPlanItem, 'id' | 'user' | 'createdAt' | 'updatedAt'>>) =>
+  api.patch<{ success: boolean; message: string; data: AdminMealPlanItem }>(`/admin/meal-plans/${mealPlanId}`, payload)
+
+export const deleteAdminMealPlan = (mealPlanId: string) =>
+  api.delete<{ success: boolean; message: string }>(`/admin/meal-plans/${mealPlanId}`)
