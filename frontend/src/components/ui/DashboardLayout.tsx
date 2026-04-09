@@ -24,13 +24,19 @@ const DashboardLayout = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const isAdmin = user?.role === 'admin'
+
+  const visibleLinks = links.filter((link) => {
+    if (isAdmin) return true
+    return link.path !== '/dashboard' && link.path !== '/admin'
+  })
 
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
   }
 
-  const currentLink = links.find((l) => location.pathname.startsWith(l.path))
+  const currentLink = visibleLinks.find((l) => location.pathname.startsWith(l.path))
   const pageTitle = currentLink ? currentLink.label : 'Application'
 
   return (
@@ -61,7 +67,7 @@ const DashboardLayout = () => {
 
         <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
           <nav className="flex flex-col gap-1.5">
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}
