@@ -31,6 +31,16 @@ const sendRefreshCookie = (res, token) => {
   })
 }
 
+const toAuthUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  avatarUrl: user.avatarUrl || '',
+  phoneNumber: user.phoneNumber || '',
+  bio: user.bio || '',
+})
+
 // POST /api/auth/register
 exports.register = async (req, res) => {
   const { name, email, password } = req.body
@@ -50,7 +60,7 @@ exports.register = async (req, res) => {
     success: true,
     message: 'Account created',
     accessToken,
-    user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    user: toAuthUser(user),
   })
 }
 
@@ -78,7 +88,7 @@ exports.login = async (req, res) => {
   res.json({
     success: true,
     accessToken,
-    user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    user: toAuthUser(user),
   })
 }
 

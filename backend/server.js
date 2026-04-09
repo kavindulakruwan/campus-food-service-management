@@ -15,13 +15,15 @@ const paymentRoutes = require('./src/routes/payment.routes')
 const orderRoutes = require('./src/routes/order.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
+const userRoutes = require('./src/routes/user.routes')
 
 const app = express()
 
 app.use(helmet())
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
 app.use(morgan('dev'))
-app.use(express.json())
+app.use(express.json({ limit: '15mb' }))
+app.use(express.urlencoded({ extended: true, limit: '15mb' }))
 app.use(cookieParser())
 
 app.get('/api/health', (_req, res) => {
@@ -45,6 +47,7 @@ const dbCheckMiddleware = (req, res, next) => {
 }
 
 app.use('/api/auth', dbCheckMiddleware, authRoutes)
+app.use('/api/users', dbCheckMiddleware, userRoutes)
 app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
 app.use('/api/chat', dbCheckMiddleware, chatRoutes)
 
