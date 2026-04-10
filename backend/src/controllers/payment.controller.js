@@ -1,16 +1,15 @@
+const QRCode = require('qrcode');
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 
-// Simulate PayPal payment initialization
+// Simulate PayPal and QR code payment initialization
 exports.initiatePayment = async (req, res) => {
   try {
     const { orderId, method } = req.body;
     const userId = req.user.id;
 
-    // We'd normally fetch the order to get the amount
     let order = await Order.findById(orderId);
     if (!order) {
-      // Create a mock order for testing if none exists
       order = await Order.create({
         user: userId,
         items: [{ name: 'Test Meal', quantity: 1, price: 10 }],
@@ -29,7 +28,6 @@ exports.initiatePayment = async (req, res) => {
     });
 
     if (method === 'PayPal') {
-      // Mock PayPal approval link
       const mockApprovalLink = `http://localhost:5173/checkout?token=mock_txn_${payment._id}`;
       return res.status(200).json({
         success: true,
@@ -38,12 +36,13 @@ exports.initiatePayment = async (req, res) => {
         approvalUrl: mockApprovalLink
       });
     } else if (method === 'QRCode') {
-      // Mock QR payload
       const qrData = `campusfood:pay:${payment._id}:amt:${order.totalAmount}`;
+      const qrImage = await QRCode.toDataURL(qrData);
       return res.status(200).json({
         success: true,
         paymentId: payment._id,
-        qrData
+        qrData,
+        qrImage
       });
     } else {
       return res.status(400).json({ success: false, message: 'Invalid method' });
