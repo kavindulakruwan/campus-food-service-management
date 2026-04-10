@@ -32,7 +32,11 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['Pending', 'Paid', 'Failed', 'Refunded'],
     default: 'Pending'
-  }
+  },
+  deliveryAddress: { type: String, default: '' },
+  specialInstructions: { type: String, default: '' },
+  paymentMethod: { type: String, default: 'cash' },
+  qrCode: { type: String },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

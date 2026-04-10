@@ -2,19 +2,24 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { orderApi } from '../../api/order.api';
 
 const MENU = [
-  { id: 'meal-1', name: 'Rice & Curry', description: 'Fresh plate with spicy curry and vegetables.', price: 4.50 },
-  { id: 'meal-2', name: 'Chicken Kottu', description: 'Hot shredded roti mixed with veggies and chicken.', price: 5.75 },
-  { id: 'meal-3', name: 'Egg Hopper Set', description: 'Crispy hopper with egg, sambol and lentil curry.', price: 3.80 },
-  { id: 'meal-4', name: 'Fruit Smoothie', description: 'Seasonal fruit shake to refresh your day.', price: 2.20 },
+  { id: 'meal-1', name: 'Rice & Curry', description: 'Fresh plate with spicy curry and vegetables.', price: 350 },
+  { id: 'meal-2', name: 'Chicken Kottu', description: 'Hot shredded roti mixed with veggies and chicken.', price: 450 },
+  { id: 'meal-3', name: 'Egg Hopper Set', description: 'Crispy hopper with egg, sambol and lentil curry.', price: 300 },
+  { id: 'meal-4', name: 'Fruit Smoothie', description: 'Seasonal fruit shake to refresh your day.', price: 320 },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
+  Pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
+  Processing: 'bg-blue-100 text-blue-800',
   preparing: 'bg-purple-100 text-purple-800',
   ready: 'bg-green-100 text-green-800',
+  Ready: 'bg-green-100 text-green-800',
   delivered: 'bg-green-200 text-green-900',
+  Completed: 'bg-green-200 text-green-900',
   cancelled: 'bg-red-100 text-red-800',
+  Cancelled: 'bg-red-100 text-red-800',
 };
 
 type CartItem = { id: string; name: string; price: number; quantity: number };
@@ -112,10 +117,10 @@ const OrdersPage: React.FC = () => {
     } finally { setCancelling(null); }
   };
 
-  const activeOrders = orders.filter(o => o.status !== 'cancelled');
-  const totalSpent = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.totalAmount, 0);
+  const activeOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'Cancelled');
+  const totalSpent = orders.filter(o => o.status !== 'cancelled' && o.status !== 'Cancelled').reduce((s, o) => s + o.totalAmount, 0);
   const thisMonthSpent = orders
-    .filter(o => o.status !== 'cancelled' && new Date(o.createdAt).getMonth() === new Date().getMonth())
+    .filter(o => o.status !== 'cancelled' && o.status !== 'Cancelled' && new Date(o.createdAt).getMonth() === new Date().getMonth())
     .reduce((s, o) => s + o.totalAmount, 0);
 
   return (
@@ -281,7 +286,7 @@ const OrdersPage: React.FC = () => {
                         <div className="flex gap-1 flex-wrap">
                           <button onClick={() => setViewOrder(order)} className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100">View</button>
                           <button onClick={() => handleViewQR(order._id)} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">QR</button>
-                          {['pending', 'confirmed'].includes(order.status) && (
+                          {['pending', 'confirmed', 'Pending', 'Processing'].includes(order.status) && (
                             <button onClick={() => handleCancel(order._id)} disabled={cancelling === order._id}
                               className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50">
                               {cancelling === order._id ? '...' : 'Cancel'}
@@ -331,7 +336,7 @@ const OrdersPage: React.FC = () => {
               </div>
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
-              {['pending', 'confirmed'].includes(viewOrder.status) && (
+              {['pending', 'confirmed', 'Pending', 'Processing'].includes(viewOrder.status) && (
                 <button onClick={() => handleCancel(viewOrder._id)}
                   className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100">Cancel Order</button>
               )}
