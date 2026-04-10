@@ -6,15 +6,17 @@ const PaymentsPage: React.FC = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [method, setMethod] = useState<'PayPal' | 'QRCode'>('PayPal');
+  const [method, setMethod] = useState<'PayPal' | 'QRCode'>('QRCode');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [qrImage, setQrImage] = useState('');
+  const [paid, setPaid] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const orderId = searchParams.get('orderId');
   const amount = searchParams.get('amount');
+  const hasNewOrder = !!orderId && !!amount;
 
   useEffect(() => {
     paymentApi.getHistory()
@@ -30,23 +32,35 @@ const PaymentsPage: React.FC = () => {
       const res: any = await paymentApi.initiate({ orderId, method });
       if (method === 'QRCode' && res.qrImage) {
         setQrImage(res.qrImage);
-        setSuccess('Scan the QR code to complete payment');
+        setSuccess('Scan the QR code below to complete your payment');
       } else if (method === 'PayPal' && res.approvalUrl) {
         setSuccess('Redirecting to PayPal...');
-        setTimeout(() => { window.location.href = res.approvalUrl; }, 1000);
+        setTimeout(() => { window.location.href = res.approvalUrl; }, 1200);
       } else {
-        setSuccess('Payment initiated successfully');
+        setSuccess('Payment initiated!');
       }
-      // Refresh history
       const hist: any = await paymentApi.getHistory();
       setPayments(hist.data ?? hist ?? []);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Payment failed');
+      setError(e?.response?.data?.message || 'Payment failed. Please try again.');
     } finally { setPaying(false); }
   };
 
+  const handleConfirmPaid = async (paymentId: string) => {
+    try {
+      await paymentApi.verify(paymentId, true);
+      setPaid(true);
+      setSuccess('Payment confirmed! Your order is being processed.');
+      setQrImage('');
+      const hist: any = await paymentApi.getHistory();
+      setPayments(hist.data ?? hist ?? []);
+    } catch { setError('Failed to confirm payment'); }
+  };
+
+  const latestPayment = payments[0];
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 max-w-4xl mx-auto">
       <div>
         <p className="text-xs uppercase tracking-widest text-orange-600">Payments</p>
         <h1 className="text-3xl font-bold text-gray-900">Payment</h1>
@@ -55,46 +69,83 @@ const PaymentsPage: React.FC = () => {
       {error && <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex justify-between">{error}<button onClick={() => setError('')} className="font-bold ml-4">×</button></div>}
       {success && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex justify-between">{success}<button onClick={() => setSuccess('')} className="font-bold ml-4">×</button></div>}
 
-      {/* Payment Form - show only if orderId in URL */}
-      {orderId && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4 max-w-md">
-          <h2 className="font-semibold text-gray-900 text-lg">Complete Payment</h2>
-          <div className="rounded-xl bg-gray-50 p-4 flex justify-between items-center">
-            <span className="text-sm text-gray-600">Order Amount</span>
-            <span className="text-xl font-bold text-gray-900">Rs. {Number(amount).toFixed(2)}</span>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">Payment Method</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(['PayPal', 'QRCode'] as const).map(m => (
-                <button key={m} onClick={() => setMethod(m)}
-                  className={`py-3 rounded-xl border-2 text-sm font-semibold transition ${method === m ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                  {m === 'PayPal' ? '💳 PayPal' : '📱 QR Code'}
-                </button>
-              ))}
+      {/* NEW ORDER PAYMENT SECTION */}
+      {hasNewOrder && !paid && (
+        <div className="rounded-2xl border-2 border-orange-200 bg-orange-50 p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xl">🛒</div>
+            <div>
+              <h2 className="font-bold text-gray-900 text-lg">Complete Your Payment</h2>
+              <p className="text-sm text-gray-500">Your order has been placed. Please pay to confirm.</p>
             </div>
           </div>
+
+          {/* Amount */}
+          <div className="rounded-xl bg-white border border-orange-100 p-4 flex justify-between items-center">
+            <span className="text-gray-600 font-medium">Order Total</span>
+            <span className="text-2xl font-bold text-orange-600">Rs. {Number(amount).toFixed(2)}</span>
+          </div>
+
+          {/* Method Select */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-3">Choose Payment Method</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setMethod('QRCode')}
+                className={`py-4 rounded-xl border-2 text-sm font-semibold transition flex flex-col items-center gap-1 ${method === 'QRCode' ? 'border-orange-500 bg-white text-orange-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                <span className="text-2xl">📱</span>
+                QR Code
+              </button>
+              <button onClick={() => setMethod('PayPal')}
+                className={`py-4 rounded-xl border-2 text-sm font-semibold transition flex flex-col items-center gap-1 ${method === 'PayPal' ? 'border-orange-500 bg-white text-orange-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                <span className="text-2xl">💳</span>
+                PayPal
+              </button>
+            </div>
+          </div>
+
+          {/* QR Code Display */}
           {qrImage && (
-            <div className="text-center space-y-2">
-              <img src={qrImage} alt="Payment QR" className="mx-auto w-48 h-48 rounded-lg border border-gray-200" />
-              <p className="text-xs text-gray-500">Scan to complete payment</p>
+            <div className="rounded-xl bg-white border border-gray-200 p-6 text-center space-y-3">
+              <p className="text-sm font-medium text-gray-700">Scan to Pay</p>
+              <img src={qrImage} alt="Payment QR" className="mx-auto w-48 h-48 rounded-lg" />
+              <p className="text-xs text-gray-400">Use any UPI or payment app to scan</p>
+              <button onClick={() => handleConfirmPaid(latestPayment?._id)}
+                className="mt-2 px-6 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
+                I've Paid ✓
+              </button>
             </div>
           )}
+
+          {/* Action Buttons */}
           <div className="flex gap-3">
-            <button onClick={() => navigate('/orders')} className="flex-1 py-3 rounded-xl border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">Back to Orders</button>
-            <button onClick={handlePay} disabled={paying}
-              className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 disabled:opacity-50">
-              {paying ? 'Processing...' : 'Pay Now'}
+            <button onClick={() => navigate('/orders')}
+              className="flex-1 py-3 rounded-xl border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 font-medium">
+              ← Back to Orders
             </button>
+            {!qrImage && (
+              <button onClick={handlePay} disabled={paying}
+                className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-bold text-sm hover:bg-orange-700 disabled:opacity-50 transition">
+                {paying ? 'Processing...' : `Pay Rs. ${Number(amount).toFixed(2)}`}
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Payment History */}
+      {paid && (
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-6 text-center space-y-3">
+          <div className="text-5xl">✅</div>
+          <h2 className="text-xl font-bold text-green-800">Payment Successful!</h2>
+          <p className="text-sm text-green-600">Your order is now being processed.</p>
+          <button onClick={() => navigate('/orders')} className="px-6 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700">View Orders</button>
+        </div>
+      )}
+
+      {/* PAYMENT HISTORY */}
       <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
           <h2 className="font-semibold text-gray-900">Payment History</h2>
-          <button onClick={() => navigate('/orders')} className="text-sm text-orange-600 hover:text-orange-700 font-medium">← Back to Orders</button>
+          {!hasNewOrder && <button onClick={() => navigate('/orders')} className="text-sm text-orange-600 hover:text-orange-700 font-medium">← Back to Orders</button>}
         </div>
         {loading ? (
           <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
@@ -112,7 +163,7 @@ const PaymentsPage: React.FC = () => {
                 {payments.map((p: any) => (
                   <tr key={p._id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-600">{new Date(p.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.transactionId ?? p._id.slice(-8)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.transactionId ?? p._id?.slice(-8)}</td>
                     <td className="px-4 py-3"><span className="px-2 py-1 rounded bg-gray-100 text-xs">{p.method}</span></td>
                     <td className="px-4 py-3 font-semibold">Rs. {Number(p.amount).toFixed(2)}</td>
                     <td className="px-4 py-3">

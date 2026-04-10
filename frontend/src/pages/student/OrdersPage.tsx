@@ -89,6 +89,11 @@ const OrdersPage: React.FC = () => {
       setCart([]); setDeliveryAddress(''); setSpecialInstructions(''); setPaymentMethod('cash');
       setActiveTab('history');
       fetchOrders();
+      // Navigate to payment page with new order details
+      const orderData = (res.data as any)?.data ?? (res.data as any);
+      if (orderData?._id) {
+        navigate(`/payments?orderId=${orderData._id}&amount=${orderData.totalAmount}`);
+      }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
       setError(err?.response?.data?.message || 'Failed to place order');
