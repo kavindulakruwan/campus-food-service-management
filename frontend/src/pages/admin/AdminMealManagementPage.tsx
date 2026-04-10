@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, PencilLine, PlusCircle, Search, Trash2 } from 'lucide-react'
+import { CalendarDays, PencilLine, PlusCircle, Search, Trash2, Utensils } from 'lucide-react'
 import { createMeal, deleteMeal, getMeals, updateMeal, type MealItem } from '../../api/meals.api'
 
 type Category = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
@@ -74,6 +74,11 @@ const AdminMealManagementPage = () => {
     event.preventDefault()
     setError('')
     setMessage('')
+
+    if (!createForm.imageUrl) {
+      setError('Please select a meal image before creating the meal')
+      return
+    }
 
     try {
       const response = await createMeal(createForm)
@@ -242,6 +247,7 @@ const AdminMealManagementPage = () => {
               <input
                 type="file"
                 accept="image/*"
+                required
                 onChange={async (event) => {
                   const file = event.target.files?.[0]
                   if (!file) {
@@ -290,56 +296,41 @@ const AdminMealManagementPage = () => {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Meal</th>
-                <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Price</th>
-                <th className="px-4 py-3 font-semibold">Availability</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">Loading meals...</td></tr>
-              ) : meals.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">No meals found</td></tr>
-              ) : meals.map((meal) => (
-                <tr key={meal.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {meal.imageUrl ? (
-                        <img src={meal.imageUrl} alt={meal.name} className="h-10 w-10 rounded-lg object-cover" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-lg bg-slate-100" />
-                      )}
-                      <div>
-                        <div className="font-semibold text-slate-900">{meal.name}</div>
-                        <div className="text-xs text-slate-500">{meal.description || 'No description'}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 uppercase text-slate-700">{meal.category}</td>
-                  <td className="px-4 py-3 text-slate-700">LKR {meal.price.toFixed(0)}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => handleToggleAvailability(meal)} className={`rounded-full px-3 py-1 text-xs font-semibold ${meal.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {meal.isAvailable ? 'Available' : 'Out of Stock'}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => openEdit(meal)} className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"><PencilLine className="h-3.5 w-3.5" /> Edit</button>
-                      <button type="button" onClick={() => handleDelete(meal)} className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {loading ? (
+          <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">Loading meals...</div>
+        ) : meals.length === 0 ? (
+          <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">No meals found</div>
+        ) : meals.map((meal) => (
+          <article key={meal.id} className="group mx-auto w-full max-w-[265px] overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="relative h-36 w-full overflow-hidden bg-slate-100">
+              {meal.imageUrl ? (
+                <img src={meal.imageUrl} alt={meal.name} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-orange-400"><Utensils className="h-10 w-10" /></div>
+              )}
+              <button onClick={() => handleToggleAvailability(meal)} className={`absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meal.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                {meal.isAvailable ? 'Available' : 'Out of Stock'}
+              </button>
+            </div>
+
+            <div className="space-y-2.5 p-3">
+              <div className="flex items-center justify-between">
+                <h2 className="line-clamp-1 text-xl font-bold tracking-tight text-slate-900">{meal.name}</h2>
+                <span className="text-xs font-semibold uppercase text-slate-500">{meal.category}</span>
+              </div>
+
+              <p className="line-clamp-2 min-h-9 text-xs text-slate-500">{meal.description || 'No description provided.'}</p>
+
+              <p className="pt-0.5 text-3xl font-black text-orange-500">LKR {meal.price.toFixed(0)}</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => openEdit(meal)} className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 sm:text-sm"><PencilLine className="h-3.5 w-3.5" /> Edit</button>
+                <button type="button" onClick={() => handleDelete(meal)} className="inline-flex items-center justify-center gap-1 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-600 sm:text-sm"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+              </div>
+            </div>
+          </article>
+        ))}
       </div>
 
       {editingMeal && (

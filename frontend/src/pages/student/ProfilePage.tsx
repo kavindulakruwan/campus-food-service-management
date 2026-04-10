@@ -5,8 +5,6 @@ import { deleteMyAccount, getMyProfile, updateMyProfile } from '../../api/user.a
 import type { AuthUser } from '../../types/auth'
 import { useNavigate } from 'react-router-dom'
 
-const fallbackAvatar = 'https://api.dicebear.com/9.x/initials/svg?seed=Campus%20Food'
-
 const ProfilePage = () => {
   const { user, updateUser, logout } = useAuth()
   const navigate = useNavigate()
@@ -26,6 +24,7 @@ const ProfilePage = () => {
   useEffect(() => {
     const loadProfile = async () => {
       setLoading(true)
+      setError('')
       try {
         const response = await getMyProfile()
         const nextProfile = response.data.user
@@ -36,6 +35,7 @@ const ProfilePage = () => {
         setBio(nextProfile.bio || '')
         setAvatarUrl(nextProfile.avatarUrl || '')
         setPreviewUrl(nextProfile.avatarUrl || '')
+        setError('')
         updateUser(nextProfile)
       } catch (profileError: any) {
         setError(profileError?.response?.data?.message || 'Failed to load profile data')

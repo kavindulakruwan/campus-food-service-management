@@ -5,6 +5,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 import DashboardPage from './pages/student/DashboardPage'
 import ProfilePage from './pages/student/ProfilePage'
 import MealsPage from './pages/student/MealsPage'
+import MealDetailPage from './pages/student/MealDetailPage'
 import MealPlannerPage from './pages/student/MealPlannerPage'
 import CommunityChatPage from './pages/student/CommunityChatPage'
 import MealManagementPage from './pages/student/MealManagementPage'
@@ -43,6 +44,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/meals" element={<MealsPage />} />
+            <Route path="/meals/:mealId" element={<MealDetailPage />} />
             <Route path="/meal-plans" element={<MealPlannerPage />} />
             <Route path="/community-chat" element={<CommunityChatPage />} />
             <Route path="/meal-management" element={<MealManagementPage />} />
