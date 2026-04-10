@@ -3,15 +3,31 @@ const Order = require('../models/Order');
 // User handlers
 exports.createOrder = async (req, res) => {
   try {
-    // Generate a fun mock order
+    const { items } = req.body;
+
+    const orderItems = Array.isArray(items) && items.length > 0
+      ? items
+          .map((item) => ({
+            name: String(item.name || 'Custom Meal'),
+            quantity: Math.max(1, Number(item.quantity) || 1),
+            price: Math.max(0, Number(item.price) || 0),
+          }))
+          .filter((item) => item.name && item.quantity > 0)
+      : [];
+
+    const defaultItems = [
+      { name: 'Spicy Chicken Sandwich', quantity: 1, price: 8.50 },
+      { name: 'Curly Fries', quantity: 1, price: 3.50 }
+    ];
+
+    const finalItems = orderItems.length > 0 ? orderItems : defaultItems;
+    const totalAmount = finalItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
+
     const order = await Order.create({
       user: req.user.id,
       orderNumber: 'ORD-' + Date.now() + 'NEW',
-      items: [
-        { name: 'Spicy Chicken Sandwich', quantity: 1, price: 8.50 },
-        { name: 'Curly Fries', quantity: 1, price: 3.50 }
-      ],
-      totalAmount: 12.00,
+      items: finalItems,
+      totalAmount,
       status: 'Pending',
       paymentStatus: 'Pending'
     });
