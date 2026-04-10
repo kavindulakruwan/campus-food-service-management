@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const links = [
   { label: 'Dashboard', path: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -42,6 +42,40 @@ const DashboardLayout = () => {
     return link.path !== '/dashboard' && link.path !== '/admin'
   })
 
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true)
+  const activityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const resetActivityTimeout = () => {
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current)
+    }
+    activityTimeoutRef.current = setTimeout(() => {
+      setIsSidebarVisible(false)
+    }, 15000)
+  }
+
+  useEffect(() => {
+    // Start timeout on initial load or path change
+    resetActivityTimeout()
+
+    const handleUserActivity = () => {
+      resetActivityTimeout()
+    }
+
+    window.addEventListener('mousemove', handleUserActivity)
+    window.addEventListener('keydown', handleUserActivity)
+    window.addEventListener('click', handleUserActivity)
+    window.addEventListener('scroll', handleUserActivity)
+
+    return () => {
+      if (activityTimeoutRef.current) clearTimeout(activityTimeoutRef.current)
+      window.removeEventListener('mousemove', handleUserActivity)
+      window.removeEventListener('keydown', handleUserActivity)
+      window.removeEventListener('click', handleUserActivity)
+      window.removeEventListener('scroll', handleUserActivity)
+    }
+  }, [location.pathname])
+
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
@@ -60,11 +94,22 @@ const DashboardLayout = () => {
         />
       )}
 
+      {/* Invisible trigger area for desktop right on the left edge - Made wider (128px) so it's easier to trigger */}
+      {!isSidebarVisible && (
+        <div 
+          className="fixed inset-y-0 left-0 w-16 z-[60] hidden lg:block bg-transparent"
+          onMouseEnter={() => {
+            setIsSidebarVisible(true)
+            resetActivityTimeout()
+          }}
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform duration-300 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${isSidebarVisible ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
       >
         <div className="flex h-16 flex-shrink-0 items-center gap-3 px-6 border-b border-slate-100">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 flex items-center justify-center shadow-md shadow-orange-300/30">
@@ -82,7 +127,10 @@ const DashboardLayout = () => {
               <NavLink
                 key={link.path}
                 to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setIsSidebarVisible(false) // Auto-hide sidebar to give full screen immediately
+                }}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
                     isActive
@@ -118,7 +166,7 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+      <div className={`flex flex-1 flex-col min-w-0 overflow-hidden transition-all duration-300 ${isSidebarVisible ? 'lg:ml-72' : 'lg:ml-0'}`}>
         {/* Top Navbar */}
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
