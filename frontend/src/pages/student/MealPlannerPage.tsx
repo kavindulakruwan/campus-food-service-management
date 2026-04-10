@@ -1,5 +1,5 @@
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import {
   createMealPlan,
@@ -12,6 +12,7 @@ import {
 } from '../../api/mealPlan.api'
 import type { MealPlanItem, MealTime } from '../../types/mealPlan'
 import { MealPlannerChatbot } from '../../components/ui/MealPlannerChatbot'
+import { Pencil, Trash2 } from 'lucide-react'
 import { PREDEFINED_MEALS } from '../../utils/mealOptions'
 import './MealPlannerPage.css'
 
@@ -100,8 +101,22 @@ const MealPlannerPage = () => {
   const [editor, setEditor] = useState<EditorState>(() =>
     plannerEmptyState(formatDateKey(startOfWeekMonday(new Date())), 'breakfast'),
   )
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
 
   const weekStartKey = useMemo(() => formatDateKey(weekStart), [weekStart])
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message })
+
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null)
+    }, 3000)
+  }
 
   const weekDays = useMemo(
     () => WEEK_DAYS.map((label, index) => ({ label, date: addDays(weekStart, index) })),
@@ -180,6 +195,14 @@ const MealPlannerPage = () => {
     setEditor((prev) => ({ ...prev, date: firstDay.date ? formatDateKey(firstDay.date) : prev.date }))
   }, [weekDays])
 
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current)
+      }
+    }
+  }, [])
+
   const openCreateEditor = (date: string, mealTime: MealTime) => {
     setErrorMessage(null)
     setSuccessMessage(null)
@@ -243,35 +266,45 @@ const MealPlannerPage = () => {
       if (editor.mode === 'create') {
         await createMealPlan(payload)
         setSuccessMessage('Meal added to your plan.')
+        showToast('success', 'Meal added to your plan.')
       } else if (editor.mealId) {
         await updateMealPlan(editor.mealId, payload)
         setSuccessMessage('Meal plan updated.')
+        showToast('success', 'Meal plan updated.')
       }
 
       setEditorStep(1)
       await runRefresh()
     } catch (error) {
-      setErrorMessage(toApiMessage(error, 'Unable to save meal plan.'))
+      const message = toApiMessage(error, 'Unable to save meal plan.')
+      setErrorMessage(message)
+      showToast('error', message)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleDelete = async () => {
-    if (!editor.mealId) return
-
+  const handleDeleteMeal = async (meal: MealPlanItem) => {
     setErrorMessage(null)
     setSuccessMessage(null)
     setIsSubmitting(true)
 
     try {
-      await deleteMealPlan(editor.mealId)
-      setSuccessMessage('Meal removed from the plan.')
-      setEditorStep(1)
-      setEditor(plannerEmptyState(editor.date, editor.mealTime))
+      await deleteMealPlan(meal.id)
+      const message = 'Meal removed from the plan.'
+      setSuccessMessage(message)
+      showToast('success', message)
+
+      if (editor.mealId === meal.id) {
+        setEditorStep(1)
+        setEditor(plannerEmptyState(meal.date, meal.mealTime))
+      }
+
       await runRefresh()
     } catch (error) {
-      setErrorMessage(toApiMessage(error, 'Unable to delete meal plan.'))
+      const message = toApiMessage(error, 'Unable to delete meal plan.')
+      setErrorMessage(message)
+      showToast('error', message)
     } finally {
       setIsSubmitting(false)
     }
@@ -290,9 +323,13 @@ const MealPlannerPage = () => {
       })
 
       await runRefresh()
-      setSuccessMessage(`${response.data.data.copiedCount} meal slots copied into this week.`)
+      const message = `${response.data.data.copiedCount} meal slots copied into this week.`
+      setSuccessMessage(message)
+      showToast('success', message)
     } catch (error) {
-      setErrorMessage(toApiMessage(error, 'Quick copy failed.'))
+      const message = toApiMessage(error, 'Quick copy failed.')
+      setErrorMessage(message)
+      showToast('error', message)
     } finally {
       setIsSubmitting(false)
     }
@@ -311,11 +348,13 @@ const MealPlannerPage = () => {
         overwrite: overwriteOnCopy,
       })
 
-      setSuccessMessage(
-        `${response.data.data.copiedCount} meal slots duplicated to week of ${toReadableDate(targetWeekStart)}.`,
-      )
+      const message = `${response.data.data.copiedCount} meal slots duplicated to week of ${toReadableDate(targetWeekStart)}.`
+      setSuccessMessage(message)
+      showToast('success', message)
     } catch (error) {
-      setErrorMessage(toApiMessage(error, 'Duplicate week failed.'))
+      const message = toApiMessage(error, 'Duplicate week failed.')
+      setErrorMessage(message)
+      showToast('error', message)
     } finally {
       setIsSubmitting(false)
     }
@@ -323,7 +362,7 @@ const MealPlannerPage = () => {
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto p-4 md:p-6 text-slate-800 font-sans">
-      <header className="relative bg-gradient-to-br from-orange-50 to-indigo-50 border border-slate-200 rounded-2xl p-6 md:p-8 overflow-hidden shadow-sm">
+      <header className="relative bg-linear-to-br from-orange-50 to-indigo-50 border border-slate-200 rounded-2xl p-6 md:p-8 overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-xl">
@@ -335,15 +374,15 @@ const MealPlannerPage = () => {
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <article className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col min-w-[120px]">
+            <article className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col min-w-30">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1">Planned meals</span>
               <strong className="text-2xl font-bold text-slate-800">{stats.mealCount}</strong>
             </article>
-            <article className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col min-w-[120px]">
+            <article className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col min-w-30">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1">Total portions</span>
               <strong className="text-2xl font-bold text-slate-800">{stats.totalQuantity}</strong>
             </article>
-            <article className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col min-w-[120px]">
+            <article className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col min-w-30">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1">Active days</span>
               <strong className="text-2xl font-bold text-slate-800">{stats.activeDays}/7</strong>
             </article>
@@ -380,7 +419,7 @@ const MealPlannerPage = () => {
           <button type="button" onClick={handleQuickCopy} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm transition-colors disabled:opacity-50">
             Quick copy previous week
           </button>
-          <button type="button" onClick={handleDuplicateToNextWeek} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow-sm hover:from-orange-600 hover:to-orange-700 transition-colors disabled:opacity-50 border border-transparent">
+          <button type="button" onClick={handleDuplicateToNextWeek} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-linear-to-r from-orange-500 to-orange-600 rounded-lg shadow-sm hover:from-orange-600 hover:to-orange-700 transition-colors disabled:opacity-50 border border-transparent">
             Duplicate to next week
           </button>
         </div>
@@ -399,7 +438,7 @@ const MealPlannerPage = () => {
             {isLoadingWeek && <span className="text-sm text-slate-500 animate-pulse">Refreshing week...</span>}
           </div>
 
-          <div className="min-w-[800px] grid grid-cols-[80px_repeat(7,1fr)] gap-3 bg-slate-50/50 p-3 rounded-xl">
+          <div className="min-w-200 grid grid-cols-[80px_repeat(7,1fr)] gap-3 bg-slate-50/50 p-3 rounded-xl">
             <div className="flex items-center justify-center font-bold text-slate-400 text-xs uppercase tracking-wider bg-slate-100 rounded-xl p-2 border border-slate-200/60">Time</div>
             {weekDays.map((day) => {
               const dateKey = formatDateKey(day.date)
@@ -422,28 +461,60 @@ const MealPlannerPage = () => {
                   const key = `${dateKey}-${mealTime}`
 
                   return (
-                    <button
+                    <div
                       key={key}
-                      type="button"
-                      className={`relative min-h-[110px] rounded-xl p-3 text-left transition-all duration-200 border flex flex-col gap-1 items-start ${
-                        meal 
-                          ? 'bg-gradient-to-b from-white to-green-50 border-green-200 hover:border-green-300 hover:shadow-md hover:-translate-y-0.5' 
+                      className={`group relative min-h-27.5 rounded-xl p-3 text-left transition-all duration-200 border flex flex-col gap-1 items-start ${
+                        meal
+                          ? 'bg-linear-to-b from-white to-green-50 border-green-200 hover:border-green-300 hover:shadow-md hover:-translate-y-0.5'
                           : 'bg-white border-dashed border-slate-300 hover:border-orange-400 hover:bg-orange-50/30'
                       }`}
-                      onClick={() => (meal ? openEditEditor(meal) : openCreateEditor(dateKey, mealTime))}
                     >
+                      <button
+                        type="button"
+                        className="absolute inset-0 z-0 rounded-xl"
+                        onClick={() => (meal ? openEditEditor(meal) : openCreateEditor(dateKey, mealTime))}
+                        aria-label={meal ? `Edit ${meal.mealName} on ${dateKey}` : `Add meal for ${dateKey} ${mealTime}`}
+                      />
+
                       {meal ? (
                         <>
-                          <strong className="text-sm text-slate-800 leading-tight block mb-1">{meal.mealName}</strong>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">
+                          <div className="relative z-10 flex w-full items-start justify-between gap-2">
+                            <strong className="text-sm text-slate-800 leading-tight block mb-1 pr-12">{meal.mealName}</strong>
+                          </div>
+                          <span className="relative z-10 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">
                             {meal.quantity} portion{meal.quantity > 1 ? 's' : ''}
                           </span>
-                          {meal.notes ? <small className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{meal.notes}</small> : null}
+                          {meal.notes ? <small className="relative z-10 text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{meal.notes}</small> : null}
+                          <div className="absolute right-2 top-2 z-20 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-indigo-300 hover:text-indigo-600"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                openEditEditor(meal)
+                              }}
+                              aria-label={`Edit ${meal.mealName}`}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm hover:border-red-300 hover:bg-red-50"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                void handleDeleteMeal(meal)
+                              }}
+                              disabled={isSubmitting}
+                              aria-label={`Delete ${meal.mealName}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </>
                       ) : (
-                        <span className="m-auto text-xs font-medium text-slate-400">Add meal</span>
+                        <span className="relative z-10 m-auto text-xs font-medium text-slate-400">Add meal</span>
                       )}
-                    </button>
+                    </div>
                   )
                 })}
               </Fragment>
@@ -536,7 +607,7 @@ const MealPlannerPage = () => {
                     <select 
                       value={selectedCategory} 
                       onChange={e => setSelectedCategory(e.target.value)}
-                      className="px-2 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 max-w-[130px]"
+                      className="px-2 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 max-w-32.5"
                     >
                       <option value="All">All Categories</option>
                       <option value="Full Meals">Full Meals</option>
@@ -647,7 +718,7 @@ const MealPlannerPage = () => {
                     <button 
                       type="submit" 
                       disabled={isSubmitting}
-                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-50 flex-[2]"
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-50 flex-2"
                     >
                       {editor.mode === 'create' ? 'Save to Plan' : 'Update Plan'}
                     </button>
@@ -655,7 +726,20 @@ const MealPlannerPage = () => {
                   {editor.mode === 'edit' && (
                     <button 
                       type="button" 
-                      onClick={handleDelete} 
+                      onClick={() => {
+                        if (!editor.mealId) return
+
+                        void handleDeleteMeal({
+                          id: editor.mealId,
+                          date: editor.date,
+                          mealTime: editor.mealTime,
+                          mealName: editor.mealName,
+                          quantity: editor.quantity,
+                          notes: editor.notes,
+                          createdAt: '',
+                          updatedAt: '',
+                        })
+                      }} 
                       disabled={isSubmitting}
                       className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-semibold rounded-lg transition-colors"
                     >
@@ -686,16 +770,36 @@ const MealPlannerPage = () => {
                 <h4 className="font-bold text-slate-700 mb-3 text-sm pb-2 border-b border-slate-200">{toReadableDate(dateKey)}</h4>
                 <div className="flex flex-col gap-2">
                   {meals.map((meal) => (
-                    <button 
-                      key={meal.id} 
-                      type="button" 
-                      onClick={() => openEditEditor(meal)}
-                      className="flex flex-col items-start gap-0.5 p-2 bg-white rounded-lg border border-slate-100 hover:border-indigo-300 hover:shadow-sm transition-all text-left"
-                    >
-                      <strong className="text-[10px] uppercase tracking-wider text-indigo-600 font-bold">{mealTimeTitle(meal.mealTime)}</strong>
-                      <span className="text-sm text-slate-800 font-medium leading-tight">{meal.mealName}</span>
-                      <small className="text-[11px] text-slate-500 mt-1">{meal.quantity} portion{meal.quantity > 1 ? 's' : ''}</small>
-                    </button>
+                    <div key={meal.id} className="relative">
+                      <button 
+                        type="button" 
+                        onClick={() => openEditEditor(meal)}
+                        className="flex w-full flex-col items-start gap-0.5 p-2 pr-16 bg-white rounded-lg border border-slate-100 hover:border-indigo-300 hover:shadow-sm transition-all text-left"
+                      >
+                        <strong className="text-[10px] uppercase tracking-wider text-indigo-600 font-bold">{mealTimeTitle(meal.mealTime)}</strong>
+                        <span className="text-sm text-slate-800 font-medium leading-tight">{meal.mealName}</span>
+                        <small className="text-[11px] text-slate-500 mt-1">{meal.quantity} portion{meal.quantity > 1 ? 's' : ''}</small>
+                      </button>
+                      <div className="absolute right-2 top-2 flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-indigo-300 hover:text-indigo-600"
+                          onClick={() => openEditEditor(meal)}
+                          aria-label={`Edit ${meal.mealName}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm hover:border-red-300 hover:bg-red-50"
+                          onClick={() => void handleDeleteMeal(meal)}
+                          disabled={isSubmitting}
+                          aria-label={`Delete ${meal.mealName}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </article>
@@ -703,6 +807,22 @@ const MealPlannerPage = () => {
           </div>
         )}
       </section>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 w-[calc(100vw-2rem)] max-w-sm">
+          <div
+            className={`rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-sm ${
+              toast.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50/95 text-emerald-800'
+                : 'border-red-200 bg-red-50/95 text-red-800'
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            <p className="text-sm font-semibold leading-relaxed">{toast.message}</p>
+          </div>
+        </div>
+      )}
       <MealPlannerChatbot />
     </div>
   )
