@@ -72,7 +72,12 @@ exports.getOrderById = async (req, res) => {
 // READ - get QR code
 exports.getOrderQRCode = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const mongoose = require('mongoose');
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const order = isObjectId
+      ? await Order.findById(req.params.id)
+      : await Order.findOne({ orderNumber: req.params.id });
+
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -80,6 +85,7 @@ exports.getOrderQRCode = async (req, res) => {
 
     // Generate if not exists
     if (!order.qrCode) {
+      const QRCode = require('qrcode');
       const qrData = JSON.stringify({ orderNumber: order.orderNumber, totalAmount: order.totalAmount, timestamp: order.createdAt });
       order.qrCode = await QRCode.toDataURL(qrData);
       await order.save();
@@ -87,6 +93,7 @@ exports.getOrderQRCode = async (req, res) => {
 
     res.json({ success: true, data: { qrCode: order.qrCode, orderNumber: order.orderNumber } });
   } catch (error) {
+    console.error('QR error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };

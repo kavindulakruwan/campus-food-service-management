@@ -104,8 +104,12 @@ const OrdersPage: React.FC = () => {
   const handleViewQR = async (orderId: string) => {
     try {
       const res = await orderApi.getQRCode(orderId);
-      const d = res.data as { data?: { qrCode: string; orderNumber: string } };
-      setQrCode(d?.data ?? (res.data as { qrCode: string; orderNumber: string }));
+      const d = (res.data as any)?.data ?? (res.data as any);
+      if (d?.qrCode) {
+        setQrCode({ qrCode: d.qrCode, orderNumber: d.orderNumber ?? '' });
+      } else {
+        setError('QR code not available for this order');
+      }
     } catch { setError('Failed to load QR code'); }
   };
 
