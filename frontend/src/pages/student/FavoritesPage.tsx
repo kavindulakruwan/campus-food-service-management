@@ -82,21 +82,13 @@ const FavoritesPage = () => {
 
               <p className="pt-0.5 text-3xl font-black text-orange-500">LKR {meal.price.toFixed(0)}</p>
 
-              <div className="grid grid-cols-3 gap-1.5">
-                <Link to="/meal-plans" className="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:text-xs">
-                  Meal Plan
-                </Link>
-                <Link
-                  to={`/meals/${meal.id}`}
-                  state={{ meal }}
-                  className="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:text-xs"
-                >
-                  View Details
-                </Link>
-                <Link to="/orders" className="rounded-xl bg-orange-500 px-2 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-orange-600 sm:text-xs">
-                  Order
-                </Link>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleRemove(meal.id)}
+                className="w-full rounded-xl bg-slate-900 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-orange-500"
+              >
+                Remove Favorite
+              </button>
             </div>
           </article>
         ))}
