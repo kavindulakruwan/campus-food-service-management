@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { orderApi } from '../../api/order.api';
 
 const MENU = [
@@ -44,6 +45,7 @@ const OrdersPage: React.FC = () => {
   const [qrCode, setQrCode] = useState<{ qrCode: string; orderNumber: string } | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'menu' | 'history'>('menu');
+  const navigate = useNavigate();
 
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.quantity, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
@@ -286,13 +288,16 @@ const OrdersPage: React.FC = () => {
                         <div className="flex gap-1 flex-wrap">
                           <button onClick={() => setViewOrder(order)} className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100">View</button>
                           <button onClick={() => handleViewQR(order._id)} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">QR</button>
+                          {order.paymentStatus === 'Pending' && order.status !== 'Cancelled' && (
+                            <button onClick={() => navigate(`/payments?orderId=${order._id}&amount=${order.totalAmount}`)}
+                              className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 font-semibold">Pay</button>
+                          )}
                           {['pending', 'confirmed', 'Pending', 'Processing'].includes(order.status) && (
                             <button onClick={() => handleCancel(order._id)} disabled={cancelling === order._id}
                               className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50">
                               {cancelling === order._id ? '...' : 'Cancel'}
                             </button>
-                          )}
-                        </div>
+                          )}                        </div>
                       </td>
                     </tr>
                   ))}
