@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentApi, type PaymentInitiateRequest } from '../../api/payment.api';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 const CheckoutPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [method, setMethod] = useState<'PayPal' | 'QRCode'>('PayPal');
+  const [method, setMethod] = useState<'PayPal' | 'QRCode'>(() => (
+    searchParams.get('method') === 'QRCode' ? 'QRCode' : 'PayPal'
+  ));
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -15,6 +17,16 @@ const CheckoutPage: React.FC = () => {
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const requestedMethod = searchParams.get('method');
+
+    if (requestedMethod === 'QRCode') {
+      setMethod('QRCode');
+    } else if (requestedMethod === 'PayPal') {
+      setMethod('PayPal');
+    }
+  }, [searchParams]);
 
   const handlePayment = async () => {
     setLoading(true);

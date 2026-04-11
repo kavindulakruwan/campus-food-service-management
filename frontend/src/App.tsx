@@ -19,6 +19,7 @@ import DigitalReceiptPage from './pages/student/DigitalReceiptPage'
 import RecommendationsPage from './pages/student/RecommendationsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminPaymentDashboard from './pages/admin/AdminPaymentDashboard'
+import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import RoleRoute from './routes/RoleRoute'
@@ -58,6 +59,14 @@ function App() {
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminHomePage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="admin/settings"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminSettingsPage />
                 </RoleRoute>
               )}
             />
