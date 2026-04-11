@@ -9,6 +9,7 @@ export interface OrderItemPayload {
 export interface CreateOrderRequest {
   items?: OrderItemPayload[];
   totalAmount?: number;
+  paymentMethod?: 'Cash' | 'PayPal' | 'QRCode';
 }
 
 export const orderApi = {

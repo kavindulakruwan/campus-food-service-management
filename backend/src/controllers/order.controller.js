@@ -27,13 +27,17 @@ exports.createOrder = async (req, res) => {
     const items = normalizeItems(req.body.items);
     const totalAmount = Number(req.body.totalAmount);
     const finalTotal = Number.isFinite(totalAmount) && totalAmount > 0 ? totalAmount : calculateTotal(items);
+    const paymentMethod = ['Cash', 'PayPal', 'QRCode'].includes(req.body.paymentMethod)
+      ? req.body.paymentMethod
+      : 'Cash';
 
     const order = await Order.create({
       user: req.user.id,
       items,
       totalAmount: finalTotal,
       status: 'Pending',
-      paymentStatus: 'Pending'
+      paymentStatus: 'Pending',
+      paymentMethod,
     });
 
     res.status(201).json({ success: true, data: order });

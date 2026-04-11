@@ -5,44 +5,55 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 const CheckoutPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const requestedMethod = searchParams.get('method');
+  const orderId = searchParams.get('orderId') || undefined;
   const [method, setMethod] = useState<'PayPal' | 'QRCode'>(() => (
-    searchParams.get('method') === 'QRCode' ? 'QRCode' : 'PayPal'
+    requestedMethod === 'QRCode' ? 'QRCode' : 'PayPal'
   ));
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [autoStarted, setAutoStarted] = useState(false);
   
   // States for real PayPal flow
   const [paypalAmount, setPaypalAmount] = useState<string | null>(null);
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const isMethodLocked = requestedMethod === 'PayPal' || requestedMethod === 'QRCode';
 
   useEffect(() => {
-    const requestedMethod = searchParams.get('method');
-
     if (requestedMethod === 'QRCode') {
       setMethod('QRCode');
     } else if (requestedMethod === 'PayPal') {
       setMethod('PayPal');
     }
-  }, [searchParams]);
+  }, [requestedMethod]);
 
-  const handlePayment = async () => {
+  const handlePayment = async (selectedMethod: 'PayPal' | 'QRCode') => {
+    if (!orderId) {
+      setError('Order not found. Please place an order first.');
+      return;
+    }
+
     setLoading(true);
     setError('');
+    setQrCode(null);
+    setPaypalAmount(null);
+
     const request: PaymentInitiateRequest = {
-      method,
-      orderId: searchParams.get('orderId') || undefined
+      method: selectedMethod,
+      orderId,
     };
 
     try {
       const response = await paymentApi.initiate(request);
-      if (method === 'PayPal') {
+      if (selectedMethod === 'PayPal') {
         setPaypalAmount(response.amount.toString());
         setCurrentPaymentId(response.paymentId);
-      } else if (method === 'QRCode') {
+      } else if (selectedMethod === 'QRCode') {
         setQrCode(response.qrData);
+        setCurrentPaymentId(response.paymentId);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to initiate payment');
@@ -50,6 +61,20 @@ const CheckoutPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (requestedMethod === 'Cash') {
+      setError('Cash payment is collected on delivery. No online gateway is required.');
+      return;
+    }
+
+    if (!isMethodLocked || !orderId || autoStarted) {
+      return;
+    }
+
+    setAutoStarted(true);
+    handlePayment(method);
+  }, [autoStarted, isMethodLocked, method, orderId]);
 
   const verifyQR = async () => {
     alert('QR Code Scanned and Payment Processed (Simulated)');
@@ -73,35 +98,41 @@ const CheckoutPage: React.FC = () => {
 
           {!qrCode && !paypalAmount ? (
             <>
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">Select Payment Method</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setMethod('PayPal')}
-                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      method === 'PayPal' 
-                      ? 'border-blue-600 bg-blue-50 text-blue-700' 
-                      : 'border-gray-200 hover:border-blue-300 text-gray-600'
-                    }`}
-                  >
-                    <span className="font-semibold tracking-wide">PayPal</span>
-                  </button>
-                  <button
-                    onClick={() => setMethod('QRCode')}
-                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      method === 'QRCode' 
-                      ? 'border-blue-600 bg-blue-50 text-blue-700' 
-                      : 'border-gray-200 hover:border-blue-300 text-gray-600'
-                    }`}
-                  >
-                    <span className="font-semibold tracking-wide">QR Code</span>
-                  </button>
+              {isMethodLocked ? (
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+                  Payment method selected: <span className="font-semibold">{method}</span>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700">Select Payment Method</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setMethod('PayPal')}
+                      className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                        method === 'PayPal' 
+                        ? 'border-blue-600 bg-blue-50 text-blue-700' 
+                        : 'border-gray-200 hover:border-blue-300 text-gray-600'
+                      }`}
+                    >
+                      <span className="font-semibold tracking-wide">PayPal</span>
+                    </button>
+                    <button
+                      onClick={() => setMethod('QRCode')}
+                      className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                        method === 'QRCode' 
+                        ? 'border-blue-600 bg-blue-50 text-blue-700' 
+                        : 'border-gray-200 hover:border-blue-300 text-gray-600'
+                      }`}
+                    >
+                      <span className="font-semibold tracking-wide">QR Code</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4">
                 <button
-                  onClick={handlePayment}
+                  onClick={() => handlePayment(method)}
                   disabled={loading}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
                 >

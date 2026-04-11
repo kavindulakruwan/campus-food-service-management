@@ -153,6 +153,7 @@ const OrdersPage: React.FC = () => {
           price: item.price,
         })),
         totalAmount: cartTotal,
+        paymentMethod,
       };
 
       const response = await orderApi.createOrder(request);
@@ -167,7 +168,7 @@ const OrdersPage: React.FC = () => {
         return;
       }
 
-      navigate(`/payments?orderId=${createdOrder._id}&method=${paymentMethod}`);
+      navigate(`/checkout?orderId=${createdOrder._id}&method=${paymentMethod}`);
     } catch (placeError: any) {
       console.error(placeError);
       setError(placeError?.response?.data?.message || 'Failed to place the order.');
@@ -181,11 +182,99 @@ const OrdersPage: React.FC = () => {
       return 'bg-emerald-100 text-emerald-700';
     }
 
+    if (value === 'Failed') {
+      return 'bg-rose-100 text-rose-700';
+    }
+
+    if (value === 'Refunded') {
+      return 'bg-slate-200 text-slate-700';
+    }
+
     if (value === 'Preparing' || value === 'Processing' || value === 'Pending') {
       return 'bg-amber-100 text-amber-700';
     }
 
     return 'bg-slate-100 text-slate-600';
+  };
+
+  const getPaymentStatusLabel = (order: any) => {
+    if (order.paymentStatus === 'Paid') {
+      return 'Payment Verified';
+    }
+
+    if (order.paymentStatus === 'Refunded') {
+      return 'Payment Refunded';
+    }
+
+    if (order.paymentStatus === 'Failed') {
+      return 'Payment Failed';
+    }
+
+    if (order.paymentMethod === 'Cash') {
+      return 'Cash Payment Pending';
+    }
+
+    if (order.paymentMethod) {
+      return 'Awaiting Online Payment';
+    }
+
+    return 'Awaiting Payment';
+  };
+
+  const getPaymentAction = (order: any) => {
+    if (order.paymentStatus === 'Pending' && order.paymentMethod !== 'Cash') {
+      return {
+        label: 'Pay Now →',
+        className: 'bg-emerald-600 text-white hover:bg-emerald-700',
+        onClick: () => navigate(
+          order.paymentMethod
+            ? `/checkout?orderId=${order._id}&method=${order.paymentMethod}`
+            : `/checkout?orderId=${order._id}`
+        ),
+      };
+    }
+
+    if (order.paymentStatus === 'Pending' && order.paymentMethod === 'Cash') {
+      return {
+        label: 'View Pending Payments',
+        className: 'bg-amber-100 text-amber-800 hover:bg-amber-200',
+        onClick: () => navigate('/payments/pending'),
+      };
+    }
+
+    if (order.paymentStatus === 'Paid') {
+      return {
+        label: 'View Paid Payments',
+        className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200',
+        onClick: () => navigate('/payments/paid'),
+      };
+    }
+
+    if (order.paymentStatus === 'Refunded') {
+      return {
+        label: 'View Refunded Payments',
+        className: 'bg-slate-200 text-slate-800 hover:bg-slate-300',
+        onClick: () => navigate('/payments/refunded'),
+      };
+    }
+
+    if (order.paymentStatus === 'Failed') {
+      return {
+        label: 'Retry Payment →',
+        className: 'bg-rose-600 text-white hover:bg-rose-700',
+        onClick: () => navigate(
+          order.paymentMethod && order.paymentMethod !== 'Cash'
+            ? `/checkout?orderId=${order._id}&method=${order.paymentMethod}`
+            : `/checkout?orderId=${order._id}`
+        ),
+      };
+    }
+
+    return {
+      label: 'View Payments',
+      className: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+      onClick: () => navigate('/payments'),
+    };
   };
 
   if (loading) {
@@ -436,6 +525,10 @@ const OrdersPage: React.FC = () => {
             </div>
           ) : (
             orders.map((order) => (
+              (() => {
+                const paymentAction = getPaymentAction(order);
+
+                return (
               <div
                 key={order._id}
                 className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between"
@@ -448,7 +541,7 @@ const OrdersPage: React.FC = () => {
                       {order.status}
                     </span>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClass(order.paymentStatus)}`}>
-                      {order.paymentStatus === 'Paid' ? 'Payment Verified' : 'Awaiting Payment'}
+                      {getPaymentStatusLabel(order)}
                     </span>
                   </div>
 
@@ -461,25 +554,17 @@ const OrdersPage: React.FC = () => {
                 </div>
 
                 <div className="shrink-0">
-                  {order.paymentStatus === 'Pending' ? (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/payments?orderId=${order._id}&method=PayPal`)}
-                      className="w-full rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 lg:w-auto"
-                    >
-                      Pay Now →
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => navigate('/payments/history')}
-                      className="w-full rounded-2xl bg-slate-100 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 lg:w-auto"
-                    >
-                      View History
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={paymentAction.onClick}
+                    className={`w-full rounded-2xl px-6 py-3 text-sm font-bold transition lg:w-auto ${paymentAction.className}`}
+                  >
+                    {paymentAction.label}
+                  </button>
                 </div>
               </div>
+                );
+              })()
             ))
           )}
         </div>

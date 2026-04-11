@@ -2,6 +2,24 @@ const mongoose = require('mongoose');
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 
+const buildInitiationPayload = (payment) => {
+  if (payment.method === 'PayPal') {
+    return {
+      success: true,
+      paymentId: payment._id,
+      amount: payment.amount,
+      approvalUrl: `http://localhost:5173/checkout?token=mock_txn_${payment._id}`,
+    };
+  }
+
+  return {
+    success: true,
+    paymentId: payment._id,
+    amount: payment.amount,
+    qrData: `campusfood:pay:${payment._id}:amt:${payment.amount}`,
+  };
+};
+
 // Simulate PayPal payment initialization
 exports.initiatePayment = async (req, res) => {
   try {
@@ -26,7 +44,26 @@ exports.initiatePayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    const payment = await Payment.create({
+    let payment = await Payment.findOne({
+      user: userId,
+      order: order._id,
+      status: 'Pending',
+    }).sort({ createdAt: -1 });
+
+    if (payment) {
+      if (payment.method !== method) {
+        payment.method = method;
+      }
+
+      if (payment.amount !== order.totalAmount) {
+        payment.amount = order.totalAmount;
+      }
+
+      await payment.save();
+      return res.status(200).json(buildInitiationPayload(payment));
+    }
+
+    payment = await Payment.create({
       user: userId,
       order: order._id,
       amount: order.totalAmount,
@@ -34,26 +71,7 @@ exports.initiatePayment = async (req, res) => {
       status: 'Pending',
     });
 
-    if (method === 'PayPal') {
-      // Mock PayPal approval link
-      const mockApprovalLink = `http://localhost:5173/checkout?token=mock_txn_${payment._id}`;
-      return res.status(200).json({
-        success: true,
-        paymentId: payment._id,
-        amount: payment.amount,
-        approvalUrl: mockApprovalLink
-      });
-    } else if (method === 'QRCode') {
-      // Mock QR payload
-      const qrData = `campusfood:pay:${payment._id}:amt:${order.totalAmount}`;
-      return res.status(200).json({
-        success: true,
-        paymentId: payment._id,
-        qrData
-      });
-    } else {
-      return res.status(400).json({ success: false, message: 'Invalid method' });
-    }
+    return res.status(200).json(buildInitiationPayload(payment));
   } catch (error) {
     console.error('Payment initiation error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });

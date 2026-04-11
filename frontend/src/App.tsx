@@ -52,6 +52,9 @@ function App() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/payments/history" element={<PaymentsPage />} />
+            <Route path="/payments/pending" element={<PaymentsPage />} />
+            <Route path="/payments/paid" element={<PaymentsPage />} />
+            <Route path="/payments/refunded" element={<PaymentsPage />} />
             <Route path="/payments/receipt/:id" element={<DigitalReceiptPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route
