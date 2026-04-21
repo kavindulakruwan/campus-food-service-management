@@ -3,6 +3,8 @@ require('express-async-errors')
 
 const express = require('express')
 const net = require('net')
+const fs = require('fs')
+const path = require('path')
 const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
@@ -83,6 +85,16 @@ app.use('/api/orders', (req, res, next) => {
   }
   return next()
 }, orderRoutes)
+
+const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist')
+const frontendIndexPath = path.join(frontendBuildPath, 'index.html')
+
+if (fs.existsSync(frontendIndexPath)) {
+  app.use(express.static(frontendBuildPath))
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(frontendIndexPath)
+  })
+}
 
 // Global error handler
 app.use((err, _req, res, _next) => {
