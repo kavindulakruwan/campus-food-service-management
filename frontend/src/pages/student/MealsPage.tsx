@@ -7,7 +7,14 @@ import { getFavoriteMeals, toggleMealFavorite } from '../../utils/mealFavorites'
 type CategoryFilter = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
 type AvailabilityFilter = 'all' | 'available' | 'out-of-stock'
 
-const categoryOptions: CategoryFilter[] = ['all', 'breakfast', 'lunch', 'dinner', 'snack', 'beverage']
+const categoryTabs: Array<{ value: CategoryFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'breakfast', label: 'Breakfast 🍳' },
+  { value: 'lunch', label: 'Lunch 🍛' },
+  { value: 'dinner', label: 'Dinner 🌙' },
+  { value: 'snack', label: 'Snacks 🍟' },
+  { value: 'beverage', label: 'Drinks 🥤' },
+]
 
 const MealsPage = () => {
   const [meals, setMeals] = useState<MealItem[]>([])
@@ -90,7 +97,7 @@ const MealsPage = () => {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <form onSubmit={handleSearch} className="grid gap-3 lg:grid-cols-[1.8fr_1fr_1fr_1fr_auto]">
+        <form onSubmit={handleSearch} className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -100,15 +107,23 @@ const MealsPage = () => {
               placeholder="Search by name, keyword, or price"
             />
           </div>
-          <select value={category} onChange={(event) => setCategory(event.target.value as CategoryFilter)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-            {categoryOptions.map((item) => (
-              <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>
-            ))}
-          </select>
           <input value={minPrice} onChange={(event) => setMinPrice(event.target.value)} type="number" min={0} placeholder="Min price" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
           <input value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} type="number" min={0} placeholder="Max price" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
           <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Search</button>
         </form>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {categoryTabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setCategory(tab.value)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${category === tab.value ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
           <button onClick={() => setAvailability('all')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${availability === 'all' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'}`}>All</button>
@@ -155,6 +170,7 @@ const MealsPage = () => {
               <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-600">
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1"><Clock3 className="h-3 w-3" /> {meal.category}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1"><Flame className="h-3 w-3 text-orange-500" /> {meal.calories} kcal</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">Stock: {meal.quantity}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1"><Sparkles className="h-3 w-3 text-emerald-500" /> Chef pick</span>
               </div>
 
@@ -171,9 +187,19 @@ const MealsPage = () => {
                 >
                   View Details
                 </Link>
-                <Link to="/orders" className="rounded-xl bg-orange-500 px-2 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-orange-600 sm:text-xs">
-                  Order
-                </Link>
+                {meal.isAvailable ? (
+                  <Link
+                    to="/orders"
+                    state={{ meal }}
+                    className="rounded-xl bg-orange-500 px-2 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-orange-600 sm:text-xs"
+                  >
+                    Order
+                  </Link>
+                ) : (
+                  <span className="rounded-xl bg-slate-200 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-500 sm:text-xs">
+                    Out of Stock
+                  </span>
+                )}
               </div>
             </div>
           </article>

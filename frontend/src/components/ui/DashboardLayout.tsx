@@ -185,7 +185,7 @@ const DashboardLayout = () => {
 
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto bg-[#f8fafc] p-4 sm:p-6 lg:p-8 relative">
-          <div className="mx-auto max-w-6xl min-h-full flex flex-col">
+          <div className="min-h-full w-full flex flex-col">
             <div className="flex-1 mb-10">
               <Outlet />
             </div>

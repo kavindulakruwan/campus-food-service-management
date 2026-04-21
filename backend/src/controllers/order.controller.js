@@ -1,17 +1,67 @@
 const Order = require('../models/Order');
+const MealItem = require('../models/MealItem');
 
 // User handlers
 exports.createOrder = async (req, res) => {
   try {
-    // Generate a fun mock order
+    const sampleItems = [
+      { name: 'Campus Burger', quantity: 1, price: 850 },
+      { name: 'Fresh Juice', quantity: 1, price: 350 },
+    ];
+
+    const requestedItems = Array.isArray(req.body?.items)
+      ? req.body.items
+          .map((item) => ({
+            mealId: item?.mealId ? String(item.mealId) : undefined,
+            name: String(item?.name || '').trim(),
+            quantity: Number(item?.quantity || 0),
+            price: Number(item?.price || 0),
+          }))
+          .filter((item) => item.name && item.quantity > 0 && item.price >= 0)
+      : [];
+
+    let items = requestedItems.length > 0 ? requestedItems : sampleItems;
+
+    const itemsWithMealId = requestedItems.filter((item) => item.mealId);
+    if (itemsWithMealId.length > 0) {
+      for (const item of itemsWithMealId) {
+        const meal = await MealItem.findById(item.mealId);
+
+        if (!meal) {
+          return res.status(404).json({ success: false, message: `Meal not found for ${item.name}` });
+        }
+
+        const currentQuantity = Number.isFinite(meal.quantity)
+          ? meal.quantity
+          : (meal.isAvailable ? 1 : 0);
+
+        if (currentQuantity < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Only ${currentQuantity} portion(s) left for ${meal.name}`,
+          });
+        }
+
+        meal.quantity = currentQuantity - item.quantity;
+        meal.isAvailable = meal.quantity > 0;
+        await meal.save();
+
+        item.name = meal.name;
+        item.price = meal.price;
+      }
+
+      items = requestedItems.map(({ mealId, ...rest }) => rest);
+    }
+
+    const totalAmount = Number(req.body?.totalAmount);
+    const safeTotalAmount = Number.isFinite(totalAmount) && totalAmount > 0
+      ? totalAmount
+      : items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
     const order = await Order.create({
       user: req.user.id,
-      orderNumber: 'ORD-' + Date.now() + 'NEW',
-      items: [
-        { name: 'Spicy Chicken Sandwich', quantity: 1, price: 8.50 },
-        { name: 'Curly Fries', quantity: 1, price: 3.50 }
-      ],
-      totalAmount: 12.00,
+      items,
+      totalAmount: safeTotalAmount,
       status: 'Pending',
       paymentStatus: 'Pending'
     });

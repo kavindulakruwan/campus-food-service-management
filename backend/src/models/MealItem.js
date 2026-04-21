@@ -17,6 +17,12 @@ const mealItemSchema = new mongoose.Schema({
     required: [true, 'Price is required'],
     min: [0, 'Price cannot be negative'],
   },
+  quantity: {
+    type: Number,
+    required: [true, 'Quantity is required'],
+    min: [0, 'Quantity cannot be negative'],
+    default: 1,
+  },
   calories: {
     type: Number,
     default: 0,

@@ -61,6 +61,7 @@ const MealDetailPage = () => {
             <div className="flex flex-wrap gap-2 text-xs text-slate-600">
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Clock3 className="h-3 w-3" /> {meal.category}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Flame className="h-3 w-3 text-orange-500" /> {meal.calories} kcal</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">Stock: {meal.quantity}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Sparkles className="h-3 w-3 text-emerald-500" /> Chef pick</span>
             </div>
 
@@ -76,10 +77,20 @@ const MealDetailPage = () => {
               >
                 Back to Meals
               </Link>
-              <Link to="/orders" className="inline-flex items-center justify-center gap-1 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600">
-                <ShoppingBag className="h-4 w-4" />
-                Order
-              </Link>
+              {meal.isAvailable ? (
+                <Link
+                  to="/orders"
+                  state={{ meal }}
+                  className="inline-flex items-center justify-center gap-1 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Order
+                </Link>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500">
+                  Out of Stock
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ const emptyForm = {
   name: '',
   category: 'lunch' as Category,
   price: 0,
+  quantity: 1,
   calories: 0,
   description: '',
   imageUrl: '',
@@ -97,6 +98,7 @@ const AdminMealManagementPage = () => {
       name: meal.name,
       category: meal.category,
       price: meal.price,
+      quantity: meal.quantity,
       calories: meal.calories,
       description: meal.description || '',
       imageUrl: meal.imageUrl || '',
@@ -133,18 +135,6 @@ const AdminMealManagementPage = () => {
       await loadMeals()
     } catch (deleteError: any) {
       setError(deleteError?.response?.data?.message || 'Failed to delete meal')
-    }
-  }
-
-  const handleToggleAvailability = async (meal: MealItem) => {
-    setError('')
-    setMessage('')
-    try {
-      const response = await updateMeal(meal.id, { isAvailable: !meal.isAvailable })
-      setMessage(response.data.message)
-      await loadMeals()
-    } catch (updateError: any) {
-      setError(updateError?.response?.data?.message || 'Failed to update availability')
     }
   }
 
@@ -243,6 +233,19 @@ const AdminMealManagementPage = () => {
             </div>
 
             <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">Quantity</label>
+              <input
+                required
+                type="number"
+                min={0}
+                value={createForm.quantity}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, quantity: Number(event.target.value) }))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                placeholder="Enter quantity"
+              />
+            </div>
+
+            <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">Choose File</label>
               <input
                 type="file"
@@ -309,9 +312,12 @@ const AdminMealManagementPage = () => {
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-orange-400"><Utensils className="h-10 w-10" /></div>
               )}
-              <button onClick={() => handleToggleAvailability(meal)} className={`absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meal.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+              <span className={`absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meal.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                 {meal.isAvailable ? 'Available' : 'Out of Stock'}
-              </button>
+              </span>
+              <span className="absolute left-2.5 top-2.5 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold text-white">
+                Stock: {meal.quantity}
+              </span>
             </div>
 
             <div className="space-y-2.5 p-3">
@@ -349,6 +355,7 @@ const AdminMealManagementPage = () => {
                 ))}
               </select>
               <input type="number" min={0} value={editForm.price} onChange={(event) => setEditForm((prev) => ({ ...prev, price: Number(event.target.value) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Price" />
+              <input type="number" min={0} value={editForm.quantity} onChange={(event) => setEditForm((prev) => ({ ...prev, quantity: Number(event.target.value) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Quantity" />
               <input type="number" min={0} value={editForm.calories} onChange={(event) => setEditForm((prev) => ({ ...prev, calories: Number(event.target.value) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Calories" />
               <textarea value={editForm.description} onChange={(event) => setEditForm((prev) => ({ ...prev, description: event.target.value }))} rows={3} className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2" placeholder="Description" />
               <input
@@ -378,10 +385,9 @@ const AdminMealManagementPage = () => {
                   <img src={editForm.imageUrl} alt="Meal preview" className="h-28 w-44 rounded-xl border border-slate-200 object-cover" />
                 </div>
               )}
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700 md:col-span-2">
-                <input type="checkbox" checked={editForm.isAvailable} onChange={(event) => setEditForm((prev) => ({ ...prev, isAvailable: event.target.checked }))} />
-                Available
-              </label>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 md:col-span-2">
+                Availability is auto-managed from quantity. Quantity 0 shows Out of Stock.
+              </p>
             </div>
 
             <div className="mt-4 flex justify-end gap-2">

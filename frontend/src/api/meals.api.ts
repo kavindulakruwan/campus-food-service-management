@@ -5,6 +5,7 @@ export interface MealItem {
   name: string
   category: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
   price: number
+  quantity: number
   calories: number
   description: string
   imageUrl: string
@@ -25,6 +26,7 @@ export interface MealPayload {
   name: string
   category: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
   price: number
+  quantity?: number
   calories?: number
   description?: string
   imageUrl?: string

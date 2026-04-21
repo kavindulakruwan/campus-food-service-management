@@ -5,6 +5,7 @@ const toMealItem = (item) => ({
   name: item.name,
   category: item.category,
   price: item.price,
+  quantity: Number.isFinite(item.quantity) ? item.quantity : (item.isAvailable ? 1 : 0),
   calories: item.calories,
   description: item.description || '',
   imageUrl: item.imageUrl || '',
@@ -55,7 +56,16 @@ exports.getMeals = async (req, res) => {
 }
 
 exports.createMeal = async (req, res) => {
-  const created = await MealItem.create(req.body)
+  const quantity = Number(req.body?.quantity)
+  const safeQuantity = Number.isFinite(quantity) && quantity >= 0 ? quantity : 1
+
+  const payload = {
+    ...req.body,
+    quantity: safeQuantity,
+    isAvailable: safeQuantity > 0,
+  }
+
+  const created = await MealItem.create(payload)
 
   return res.status(201).json({
     success: true,
@@ -67,7 +77,14 @@ exports.createMeal = async (req, res) => {
 exports.updateMeal = async (req, res) => {
   const { id } = req.params
 
-  const updated = await MealItem.findByIdAndUpdate(id, req.body, {
+  const payload = { ...req.body }
+  if (payload.quantity !== undefined) {
+    const quantity = Number(payload.quantity)
+    payload.quantity = Number.isFinite(quantity) && quantity >= 0 ? quantity : 0
+    payload.isAvailable = payload.quantity > 0
+  }
+
+  const updated = await MealItem.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
   })
