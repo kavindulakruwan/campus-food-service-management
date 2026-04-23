@@ -21,6 +21,8 @@ const chatRoutes = require('./src/routes/chat.routes')
 const userRoutes = require('./src/routes/user.routes')
 
 const app = express()
+let reconnectInProgress = false
+let reconnectPromise = null
 
 app.use(helmet())
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
@@ -39,14 +41,31 @@ app.get('/api/health', (_req, res) => {
   })
 })
 
-const dbCheckMiddleware = (req, res, next) => {
+const dbCheckMiddleware = async (req, res, next) => {
+  if (getMongoStatus().connected) {
+    return next()
+  }
+
+  try {
+    if (!reconnectPromise) {
+      reconnectPromise = connectDB().finally(() => {
+        reconnectPromise = null
+      })
+    }
+
+    await reconnectPromise
+  } catch (_error) {
+    // Handled below by connected check.
+  }
+
   if (!getMongoStatus().connected) {
     return res.status(503).json({
       success: false,
       message: 'Database unavailable. Check MONGO_URI and Atlas IP access list.',
     })
   }
-  next()
+
+  return next()
 }
 
 app.use('/api/auth', dbCheckMiddleware, authRoutes)
@@ -132,6 +151,22 @@ const findAvailablePort = (startPort, maxAttempts = 20) =>
     tryPort()
   })
 
+const startMongoReconnectLoop = () => {
+  setInterval(async () => {
+    if (getMongoStatus().connected || reconnectInProgress) return
+
+    reconnectInProgress = true
+    try {
+      await connectDB()
+      console.log('[INFO] MongoDB reconnected successfully.')
+    } catch (error) {
+      console.warn(`[WARN] MongoDB reconnect failed: ${error.message}`)
+    } finally {
+      reconnectInProgress = false
+    }
+  }, 15000)
+}
+
 const start = async () => {
   try {
     await connectDB()
@@ -148,6 +183,8 @@ const start = async () => {
   if (port !== requestedPort) {
     console.warn(`[WARN] Port ${requestedPort} is busy. Using port ${port} instead.`)
   }
+
+  startMongoReconnectLoop()
 
   app.listen(port, () => console.log(`[SERVER] http://localhost:${port}`))
 }

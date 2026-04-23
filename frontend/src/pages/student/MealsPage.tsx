@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Clock3, Flame, Search, Sparkles, Star, Utensils } from 'lucide-react'
+import { Clock3, Flame, Search, Sparkles, Star, Tag, Utensils } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { getMeals, getMealSuggestions, type MealItem } from '../../api/meals.api'
 import { getFavoriteMeals, toggleMealFavorite } from '../../utils/mealFavorites'
@@ -104,6 +104,16 @@ const MealsPage = () => {
 
   const availableCount = useMemo(() => meals.filter((meal) => meal.isAvailable).length, [meals])
 
+  const getOfferLabel = (meal: MealItem) => {
+    if (!meal.offer?.isActive || meal.offer.type === 'none') return null
+
+    if (meal.offer.type === 'discount') {
+      return `${meal.offer.discountPercent}% OFF`
+    }
+
+    return meal.offer.title || 'Combo Offer'
+  }
+
   return (
     <section className="space-y-8">
       <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-orange-600 p-8 text-white shadow-xl shadow-slate-300/20">
@@ -202,50 +212,75 @@ const MealsPage = () => {
         ) : meals.length === 0 ? (
           <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">No meals found for this filter.</div>
         ) : meals.map((meal) => (
-          <article key={meal.id} className="group mx-auto w-full max-w-[265px] overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-            <div className="relative h-36 w-full overflow-hidden bg-slate-100">
+          <article key={meal.id} className="group relative mx-auto w-full max-w-[265px] overflow-hidden rounded-3xl border border-white/40 bg-white/35 text-slate-900 shadow-[0_14px_40px_-20px_rgba(15,23,42,0.45)] ring-1 ring-white/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-white/45 hover:shadow-[0_24px_50px_-24px_rgba(15,23,42,0.55)]">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/55 via-white/15 to-orange-200/30" />
+
+            <div className="relative h-36 w-full overflow-hidden border-b border-white/30 bg-slate-100/70">
               {meal.imageUrl ? (
                 <img src={meal.imageUrl} alt={meal.name} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-orange-400"><Utensils className="h-10 w-10" /></div>
               )}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/25 via-transparent to-transparent" />
               <button
                 type="button"
                 onClick={() => handleToggleFavorite(meal)}
-                className={`absolute right-2.5 top-2.5 rounded-full p-1.5 shadow-sm ${favoriteIds.includes(meal.id) ? 'bg-orange-500 text-white' : 'bg-white text-slate-500 hover:text-orange-500'}`}
+                className={`absolute right-2.5 top-2.5 rounded-full border p-1.5 shadow-sm backdrop-blur-md ${favoriteIds.includes(meal.id) ? 'border-orange-200/70 bg-orange-500/85 text-white' : 'border-white/70 bg-white/75 text-slate-500 hover:text-orange-500'}`}
                 aria-label="Favorite meal"
               >
                 <Star className={`h-4 w-4 ${favoriteIds.includes(meal.id) ? 'fill-current' : ''}`} />
               </button>
+              {getOfferLabel(meal) && (
+                <div className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 rounded-full border border-orange-100/70 bg-orange-500/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm backdrop-blur-md">
+                  <Tag className="h-3 w-3" />
+                  {getOfferLabel(meal)}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2.5 p-3">
+            <div className="relative space-y-2.5 p-3">
               <div className="flex items-center justify-between">
-                <h2 className="line-clamp-1 text-xl font-bold tracking-tight text-slate-900">{meal.name}</h2>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meal.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                <h2 className="line-clamp-1 text-xl font-bold tracking-tight text-slate-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.35)]">{meal.name}</h2>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold backdrop-blur-md ${meal.isAvailable ? 'border-emerald-200/60 bg-emerald-100/75 text-emerald-800' : 'border-rose-200/70 bg-rose-100/75 text-rose-800'}`}>
                   {meal.isAvailable ? 'Available' : 'Out of Stock'}
                 </span>
               </div>
 
-              <p className="line-clamp-2 min-h-9 text-xs text-slate-500">{meal.description || 'No description provided.'}</p>
+              <p className="line-clamp-2 min-h-9 text-xs text-slate-600">{meal.description || 'No description provided.'}</p>
+
+              {meal.offer?.isActive && meal.offer.type === 'combo' && meal.offer.comboText && (
+                <div className="rounded-xl border border-amber-100/80 bg-amber-50/65 px-3 py-2 text-xs text-amber-900 backdrop-blur-sm">
+                  <p className="font-bold uppercase tracking-wide">Combo Offer</p>
+                  <p className="mt-1">{meal.offer.comboText}</p>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-600">
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1"><Clock3 className="h-3 w-3" /> {meal.category}</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1"><Flame className="h-3 w-3 text-orange-500" /> {meal.calories} kcal</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">Stock: {meal.quantity}</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1"><Sparkles className="h-3 w-3 text-emerald-500" /> Chef pick</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/45 px-2 py-1 backdrop-blur-sm"><Clock3 className="h-3 w-3" /> {meal.category}</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/45 px-2 py-1 backdrop-blur-sm"><Flame className="h-3 w-3 text-orange-500" /> {meal.calories} kcal</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/45 px-2 py-1 backdrop-blur-sm">Stock: {meal.quantity}</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/45 px-2 py-1 backdrop-blur-sm"><Sparkles className="h-3 w-3 text-emerald-500" /> Chef pick</span>
               </div>
 
-              <p className="pt-0.5 text-3xl font-black text-orange-500">LKR {meal.price.toFixed(0)}</p>
+              <div className="pt-0.5">
+                {meal.offer?.isActive && meal.offer.type === 'discount' ? (
+                  <div className="flex items-end gap-2">
+                    <p className="text-3xl font-black text-orange-500 drop-shadow-[0_2px_6px_rgba(251,146,60,0.35)]">LKR {meal.discountedPrice.toFixed(0)}</p>
+                    <p className="pb-1 text-sm font-semibold text-slate-400 line-through">LKR {meal.price.toFixed(0)}</p>
+                  </div>
+                ) : (
+                  <p className="text-3xl font-black text-orange-500 drop-shadow-[0_2px_6px_rgba(251,146,60,0.35)]">LKR {meal.price.toFixed(0)}</p>
+                )}
+              </div>
 
               <div className="grid grid-cols-3 gap-1.5">
-                <Link to="/meal-plans" className="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:text-xs">
+                <Link to="/meal-plans" className="rounded-xl border border-white/70 bg-white/70 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700 backdrop-blur-sm transition hover:bg-white sm:text-xs">
                   Meal Plan
                 </Link>
                 <Link
                   to={`/meals/${meal.id}`}
                   state={{ meal }}
-                  className="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:text-xs"
+                  className="rounded-xl border border-white/70 bg-white/70 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700 backdrop-blur-sm transition hover:bg-white sm:text-xs"
                 >
                   View Details
                 </Link>
@@ -253,12 +288,12 @@ const MealsPage = () => {
                   <Link
                     to="/orders"
                     state={{ meal }}
-                    className="rounded-xl bg-orange-500 px-2 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-orange-600 sm:text-xs"
+                    className="rounded-xl border border-orange-200/70 bg-orange-500/90 px-2 py-1.5 text-center text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-orange-600 sm:text-xs"
                   >
                     Order
                   </Link>
                 ) : (
-                  <span className="rounded-xl bg-slate-200 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-500 sm:text-xs">
+                  <span className="rounded-xl border border-slate-200/70 bg-slate-200/75 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-600 backdrop-blur-sm sm:text-xs">
                     Out of Stock
                   </span>
                 )}

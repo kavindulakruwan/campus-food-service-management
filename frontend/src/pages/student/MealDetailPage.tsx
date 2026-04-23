@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Clock3, Flame, ShoppingBag, Sparkles, Star, Trash2, UtensilsCrossed } from 'lucide-react'
+import { ArrowLeft, Clock3, Flame, ShoppingBag, Sparkles, Star, Tag, Trash2, UtensilsCrossed } from 'lucide-react'
 import axios from 'axios'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -167,6 +167,9 @@ const MealDetailPage = () => {
     )
   }
 
+  const hasActiveOffer = Boolean(meal.offer?.isActive && meal.offer.type !== 'none')
+  const offerPrice = meal.offer?.type === 'discount' ? meal.discountedPrice : meal.price
+
   return (
     <section className="space-y-6">
       <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-orange-600 p-8 text-white shadow-xl shadow-slate-300/20">
@@ -216,7 +219,31 @@ const MealDetailPage = () => {
               </div>
             </div>
 
-            <p className="text-4xl font-black text-orange-500">LKR {meal.price.toFixed(0)}</p>
+            {hasActiveOffer && (
+              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">Special Offer</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Tag className="h-4 w-4 text-orange-600" />
+                  <span>{meal.offer.title || 'Meal offer available'}</span>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">
+                  {meal.offer.type === 'discount'
+                    ? `${meal.offer.discountPercent}% discount applied to this meal.`
+                    : meal.offer.comboText || 'Combo offer available for this meal.'}
+                </p>
+              </div>
+            )}
+
+            <div>
+              {meal.offer?.isActive && meal.offer.type === 'discount' ? (
+                <div className="flex items-end gap-3">
+                  <p className="text-4xl font-black text-orange-500">LKR {offerPrice.toFixed(0)}</p>
+                  <p className="pb-1 text-lg font-semibold text-slate-400 line-through">LKR {meal.price.toFixed(0)}</p>
+                </div>
+              ) : (
+                <p className="text-4xl font-black text-orange-500">LKR {meal.price.toFixed(0)}</p>
+              )}
+            </div>
 
             <div className="grid gap-2 sm:grid-cols-3">
               <Link to="/meal-plans" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50">

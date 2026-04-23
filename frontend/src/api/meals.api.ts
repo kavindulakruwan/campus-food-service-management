@@ -12,6 +12,14 @@ export interface MealItem {
   isAvailable: boolean
   averageRating: number
   reviewCount: number
+  discountedPrice: number
+  offer: {
+    type: 'none' | 'discount' | 'combo'
+    title: string
+    discountPercent: number
+    comboText: string
+    isActive: boolean
+  }
   createdAt: string
   updatedAt: string
 }
@@ -58,6 +66,13 @@ export interface MealPayload {
   description?: string
   imageUrl?: string
   isAvailable?: boolean
+  offer?: {
+    type?: 'none' | 'discount' | 'combo'
+    title?: string
+    discountPercent?: number
+    comboText?: string
+    isActive?: boolean
+  }
 }
 
 export const getMeals = (filters: MealFilters) =>

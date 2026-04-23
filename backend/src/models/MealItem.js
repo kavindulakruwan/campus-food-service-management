@@ -1,5 +1,35 @@
 const mongoose = require('mongoose')
 
+const mealOfferSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['none', 'discount', 'combo'],
+    default: 'none',
+  },
+  title: {
+    type: String,
+    trim: true,
+    maxlength: [80, 'Offer title too long'],
+    default: '',
+  },
+  discountPercent: {
+    type: Number,
+    min: [0, 'Discount cannot be negative'],
+    max: [100, 'Discount cannot exceed 100'],
+    default: 0,
+  },
+  comboText: {
+    type: String,
+    trim: true,
+    maxlength: [120, 'Combo offer text too long'],
+    default: '',
+  },
+  isActive: {
+    type: Boolean,
+    default: false,
+  },
+}, { _id: false })
+
 const mealReviewSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -66,6 +96,10 @@ const mealItemSchema = new mongoose.Schema({
   reviews: {
     type: [mealReviewSchema],
     default: [],
+  },
+  offer: {
+    type: mealOfferSchema,
+    default: () => ({}),
   },
 }, { timestamps: true })
 

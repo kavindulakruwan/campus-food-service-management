@@ -27,6 +27,21 @@ const toReview = (review) => ({
   updatedAt: review.updatedAt,
 })
 
+const toOffer = (offer = {}) => {
+  const type = ['discount', 'combo'].includes(offer.type) && offer.isActive ? offer.type : 'none'
+  const discountPercent = type === 'discount' ? Number(offer.discountPercent || 0) : 0
+  const title = offer.title || ''
+  const comboText = offer.comboText || ''
+
+  return {
+    type,
+    title,
+    discountPercent,
+    comboText,
+    isActive: type !== 'none',
+  }
+}
+
 const toMealItem = (item) => ({
   ...getReviewSummary(item.reviews),
   id: item._id.toString(),
@@ -38,6 +53,10 @@ const toMealItem = (item) => ({
   description: item.description || '',
   imageUrl: item.imageUrl || '',
   isAvailable: item.isAvailable,
+  offer: toOffer(item.offer),
+  discountedPrice: toOffer(item.offer).type === 'discount'
+    ? Number((item.price * (1 - (toOffer(item.offer).discountPercent / 100))).toFixed(2))
+    : item.price,
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
 })
