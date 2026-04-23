@@ -83,6 +83,42 @@ exports.getMeals = async (req, res) => {
   })
 }
 
+exports.getMealSuggestions = async (req, res) => {
+  const rawQuery = typeof req.query.query === 'string' ? req.query.query.trim() : ''
+  if (!rawQuery) {
+    return res.json({
+      success: true,
+      data: {
+        suggestions: [],
+      },
+    })
+  }
+
+  const matches = await MealItem.find({
+    name: { $regex: rawQuery, $options: 'i' },
+  })
+    .select('name')
+    .sort({ createdAt: -1 })
+    .limit(12)
+
+  const seen = new Set()
+  const suggestions = []
+
+  matches.forEach((item) => {
+    const normalized = item.name.trim().toLowerCase()
+    if (!normalized || seen.has(normalized) || suggestions.length >= 8) return
+    seen.add(normalized)
+    suggestions.push(item.name)
+  })
+
+  return res.json({
+    success: true,
+    data: {
+      suggestions,
+    },
+  })
+}
+
 exports.createMeal = async (req, res) => {
   const quantity = Number(req.body?.quantity)
   const safeQuantity = Number.isFinite(quantity) && quantity >= 0 ? quantity : 1

@@ -34,6 +34,13 @@ export interface MealReviewSummary {
   reviewCount: number
 }
 
+export interface MealSuggestionResponse {
+  success: boolean
+  data: {
+    suggestions: string[]
+  }
+}
+
 export interface MealFilters {
   search?: string
   category?: 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
@@ -76,3 +83,6 @@ export const updateMyMealReview = (mealId: string, payload: { rating: number; co
 
 export const deleteMyMealReview = (mealId: string) =>
   api.delete<{ success: boolean; message: string; data: { summary: MealReviewSummary } }>(`/meals/${mealId}/reviews/my`)
+
+export const getMealSuggestions = (query: string) =>
+  api.get<MealSuggestionResponse>('/meals/suggestions', { params: { query } })

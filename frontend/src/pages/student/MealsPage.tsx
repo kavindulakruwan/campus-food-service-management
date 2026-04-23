@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Clock3, Flame, Search, Sparkles, Star, Utensils } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { getMeals, type MealItem } from '../../api/meals.api'
+import { getMeals, getMealSuggestions, type MealItem } from '../../api/meals.api'
 import { getFavoriteMeals, toggleMealFavorite } from '../../utils/mealFavorites'
 
 type CategoryFilter = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
@@ -26,6 +26,9 @@ const MealsPage = () => {
   const [maxPrice, setMaxPrice] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getFavoriteMeals().map((meal) => meal.id))
 
   const loadMeals = async () => {
@@ -51,9 +54,39 @@ const MealsPage = () => {
     void loadMeals()
   }, [query, category, availability, minPrice, maxPrice])
 
+  useEffect(() => {
+    const trimmed = searchText.trim()
+    if (!trimmed) {
+      setSuggestions([])
+      setSuggestionsLoading(false)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setSuggestionsLoading(true)
+      try {
+        const response = await getMealSuggestions(trimmed)
+        setSuggestions(response.data.data.suggestions)
+      } catch (_error) {
+        setSuggestions([])
+      } finally {
+        setSuggestionsLoading(false)
+      }
+    }, 250)
+
+    return () => clearTimeout(timer)
+  }, [searchText])
+
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault()
     setQuery(searchText.trim())
+    setShowSuggestions(false)
+  }
+
+  const handleSuggestionClick = (value: string) => {
+    setSearchText(value)
+    setQuery(value)
+    setShowSuggestions(false)
   }
 
   const handleToggleFavorite = (meal: MealItem) => {
@@ -98,14 +131,43 @@ const MealsPage = () => {
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <form onSubmit={handleSearch} className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto]">
-          <div className="relative">
+          <div className="relative" onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
+              onChange={(event) => {
+                setSearchText(event.target.value)
+                setShowSuggestions(true)
+              }}
+              onFocus={() => setShowSuggestions(true)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-orange-400 focus:bg-white"
               placeholder="Search by name, keyword, or price"
+              autoComplete="off"
             />
+
+            {showSuggestions && searchText.trim() && (
+              <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                {suggestionsLoading ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">Finding suggestions...</p>
+                ) : suggestions.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">No matching meals</p>
+                ) : (
+                  <ul className="max-h-56 overflow-y-auto py-1">
+                    {suggestions.map((item) => (
+                      <li key={item}>
+                        <button
+                          type="button"
+                          onMouseDown={() => handleSuggestionClick(item)}
+                          className="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-orange-50"
+                        >
+                          {item}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
           <input value={minPrice} onChange={(event) => setMinPrice(event.target.value)} type="number" min={0} placeholder="Min price" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
           <input value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} type="number" min={0} placeholder="Max price" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />

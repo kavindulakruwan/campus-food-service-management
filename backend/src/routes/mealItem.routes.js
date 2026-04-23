@@ -10,6 +10,7 @@ const router = express.Router()
 router.use(protect)
 
 router.get('/', controller.getMeals)
+router.get('/suggestions', controller.getMealSuggestions)
 router.get('/:id/reviews', controller.getMealReviews)
 router.post('/:id/reviews', validate(mealReviewSchema), controller.createMealReview)
 router.patch('/:id/reviews/my', validate(mealReviewSchema), controller.updateMyMealReview)
