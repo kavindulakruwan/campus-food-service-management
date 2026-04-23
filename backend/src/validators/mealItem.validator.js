@@ -24,7 +24,13 @@ const updateMealItemSchema = z.object({
   isAvailable: z.boolean().optional(),
 })
 
+const mealReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().min(3).max(300),
+})
+
 module.exports = {
   createMealItemSchema,
   updateMealItemSchema,
+  mealReviewSchema,
 }

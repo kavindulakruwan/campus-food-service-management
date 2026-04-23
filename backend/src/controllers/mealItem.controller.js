@@ -1,6 +1,34 @@
 const MealItem = require('../models/MealItem')
 
+const getReviewSummary = (reviews = []) => {
+  if (!reviews.length) {
+    return { averageRating: 0, reviewCount: 0 }
+  }
+
+  const total = reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0)
+  const averageRating = Number((total / reviews.length).toFixed(1))
+
+  return {
+    averageRating,
+    reviewCount: reviews.length,
+  }
+}
+
+const toReview = (review) => ({
+  id: review._id.toString(),
+  user: {
+    id: review.user?._id?.toString?.() || review.user?.toString?.() || '',
+    name: review.user?.name || 'Unknown user',
+    role: review.user?.role || 'student',
+  },
+  rating: review.rating,
+  comment: review.comment,
+  createdAt: review.createdAt,
+  updatedAt: review.updatedAt,
+})
+
 const toMealItem = (item) => ({
+  ...getReviewSummary(item.reviews),
   id: item._id.toString(),
   name: item.name,
   category: item.category,
@@ -109,4 +137,120 @@ exports.deleteMeal = async (req, res) => {
   }
 
   return res.json({ success: true, message: 'Meal deleted successfully' })
+}
+
+exports.getMealReviews = async (req, res) => {
+  const { id } = req.params
+
+  const meal = await MealItem.findById(id).populate('reviews.user', 'name role')
+  if (!meal) {
+    return res.status(404).json({ success: false, message: 'Meal not found' })
+  }
+
+  const reviews = [...meal.reviews]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map(toReview)
+
+  return res.json({
+    success: true,
+    data: {
+      reviews,
+      summary: getReviewSummary(meal.reviews),
+    },
+  })
+}
+
+exports.createMealReview = async (req, res) => {
+  const { id } = req.params
+  const { rating, comment } = req.body
+
+  const meal = await MealItem.findById(id)
+  if (!meal) {
+    return res.status(404).json({ success: false, message: 'Meal not found' })
+  }
+
+  const existing = meal.reviews.find((review) => review.user.toString() === req.user.id)
+  if (existing) {
+    return res.status(409).json({
+      success: false,
+      message: 'You already reviewed this meal. Edit your review instead.',
+    })
+  }
+
+  meal.reviews.push({
+    user: req.user.id,
+    rating,
+    comment: comment.trim(),
+  })
+
+  await meal.save()
+  await meal.populate('reviews.user', 'name role')
+
+  const created = meal.reviews.find((review) => review.user._id.toString() === req.user.id)
+
+  return res.status(201).json({
+    success: true,
+    message: 'Review added successfully',
+    data: {
+      review: toReview(created),
+      summary: getReviewSummary(meal.reviews),
+    },
+  })
+}
+
+exports.updateMyMealReview = async (req, res) => {
+  const { id } = req.params
+  const { rating, comment } = req.body
+
+  const meal = await MealItem.findById(id)
+  if (!meal) {
+    return res.status(404).json({ success: false, message: 'Meal not found' })
+  }
+
+  const review = meal.reviews.find((item) => item.user.toString() === req.user.id)
+  if (!review) {
+    return res.status(404).json({ success: false, message: 'Your review was not found for this meal' })
+  }
+
+  review.rating = rating
+  review.comment = comment.trim()
+
+  await meal.save()
+  await meal.populate('reviews.user', 'name role')
+
+  const updated = meal.reviews.find((item) => item.user._id.toString() === req.user.id)
+
+  return res.json({
+    success: true,
+    message: 'Review updated successfully',
+    data: {
+      review: toReview(updated),
+      summary: getReviewSummary(meal.reviews),
+    },
+  })
+}
+
+exports.deleteMyMealReview = async (req, res) => {
+  const { id } = req.params
+
+  const meal = await MealItem.findById(id)
+  if (!meal) {
+    return res.status(404).json({ success: false, message: 'Meal not found' })
+  }
+
+  const review = meal.reviews.find((item) => item.user.toString() === req.user.id)
+  if (!review) {
+    return res.status(404).json({ success: false, message: 'Your review was not found for this meal' })
+  }
+
+  meal.reviews = meal.reviews.filter((item) => item.user.toString() !== req.user.id)
+  await meal.save()
+
+  return res.json({
+    success: true,
+    message: 'Review deleted successfully',
+    data: {
+      summary: getReviewSummary(meal.reviews),
+    },
+  })
 }

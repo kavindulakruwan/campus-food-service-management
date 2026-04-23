@@ -10,8 +10,28 @@ export interface MealItem {
   description: string
   imageUrl: string
   isAvailable: boolean
+  averageRating: number
+  reviewCount: number
   createdAt: string
   updatedAt: string
+}
+
+export interface MealReview {
+  id: string
+  user: {
+    id: string
+    name: string
+    role: 'student' | 'admin'
+  }
+  rating: number
+  comment: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MealReviewSummary {
+  averageRating: number
+  reviewCount: number
 }
 
 export interface MealFilters {
@@ -44,3 +64,15 @@ export const updateMeal = (mealId: string, payload: Partial<MealPayload>) =>
 
 export const deleteMeal = (mealId: string) =>
   api.delete<{ success: boolean; message: string }>(`/meals/${mealId}`)
+
+export const getMealReviews = (mealId: string) =>
+  api.get<{ success: boolean; data: { reviews: MealReview[]; summary: MealReviewSummary } }>(`/meals/${mealId}/reviews`)
+
+export const createMealReview = (mealId: string, payload: { rating: number; comment: string }) =>
+  api.post<{ success: boolean; message: string; data: { review: MealReview; summary: MealReviewSummary } }>(`/meals/${mealId}/reviews`, payload)
+
+export const updateMyMealReview = (mealId: string, payload: { rating: number; comment: string }) =>
+  api.patch<{ success: boolean; message: string; data: { review: MealReview; summary: MealReviewSummary } }>(`/meals/${mealId}/reviews/my`, payload)
+
+export const deleteMyMealReview = (mealId: string) =>
+  api.delete<{ success: boolean; message: string; data: { summary: MealReviewSummary } }>(`/meals/${mealId}/reviews/my`)

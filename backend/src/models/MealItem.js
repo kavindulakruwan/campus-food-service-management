@@ -1,5 +1,25 @@
 const mongoose = require('mongoose')
 
+const mealReviewSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: [1, 'Rating must be at least 1'],
+    max: [5, 'Rating cannot be greater than 5'],
+  },
+  comment: {
+    type: String,
+    required: [true, 'Review comment is required'],
+    trim: true,
+    maxlength: [300, 'Review comment too long'],
+  },
+}, { timestamps: true })
+
 const mealItemSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -42,6 +62,10 @@ const mealItemSchema = new mongoose.Schema({
   isAvailable: {
     type: Boolean,
     default: true,
+  },
+  reviews: {
+    type: [mealReviewSchema],
+    default: [],
   },
 }, { timestamps: true })
 
