@@ -26,7 +26,7 @@ const updateMealItemSchema = z.object({
 
 const mealReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
-  comment: z.string().trim().min(3).max(300),
+  comment: z.string().trim().min(1).max(300),
 })
 
 module.exports = {

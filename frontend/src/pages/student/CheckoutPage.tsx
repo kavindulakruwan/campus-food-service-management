@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentApi, type PaymentInitiateRequest } from '../../api/payment.api';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
@@ -120,14 +120,14 @@ const CheckoutPage: React.FC = () => {
                  <p className="text-3xl font-bold text-gray-900">${Number(paypalAmount).toFixed(2)}</p>
                </div>
                <PayPalScriptProvider options={{ clientId: "test", currency: "USD", intent: "capture" }}>
-                 <PayPalButtons 
-                    createOrder={(data, actions) => {
+                  <PayPalButtons 
+                    createOrder={(_data, actions) => {
                       return actions.order.create({
                          intent: "CAPTURE",
                          purchase_units: [{ amount: { currency_code: "USD", value: Number(paypalAmount).toFixed(2) } }]
                       });
                     }}
-                    onApprove={async (data, actions) => {
+                    onApprove={async (_data, actions) => {
                       if (actions.order) {
                         try {
                           await actions.order.capture();

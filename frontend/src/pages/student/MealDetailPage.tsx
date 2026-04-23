@@ -13,6 +13,8 @@ import {
 } from '../../api/meals.api'
 import useAuth from '../../hooks/useAuth'
 
+const QUICK_EMOJIS = ['😋', '🔥', '😍', '👍', '🥗', '🍛', '🍜', '💯']
+
 const formatError = (error: unknown, fallback: string) => {
   if (axios.isAxiosError(error)) {
     return (error.response?.data as { message?: string } | undefined)?.message || fallback
@@ -47,6 +49,7 @@ const MealDetailPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const commentLength = useMemo(() => Array.from(comment.trim()).length, [comment])
 
   const myReview = useMemo(() => {
     if (!user) return null
@@ -89,8 +92,9 @@ const MealDetailPage = () => {
     if (!meal?.id) return
 
     const trimmedComment = comment.trim()
-    if (trimmedComment.length < 3 || trimmedComment.length > 300) {
-      setErrorMessage('Review comment must be between 3 and 300 characters.')
+    const trimmedLength = Array.from(trimmedComment).length
+    if (trimmedLength < 1 || trimmedLength > 300) {
+      setErrorMessage('Review comment must be between 1 and 300 characters.')
       return
     }
 
@@ -136,6 +140,11 @@ const MealDetailPage = () => {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const appendEmoji = (emoji: string) => {
+    if (commentLength >= 300) return
+    setComment((prev) => `${prev}${emoji}`)
   }
 
   if (!meal) {
@@ -281,7 +290,21 @@ const MealDetailPage = () => {
                 placeholder="How was the taste, quality, value, and portion size?"
                 className="min-h-28 w-full rounded-2xl border border-slate-300 bg-white p-3 text-sm leading-6 text-slate-700 shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
               />
-              <p className="mt-1 text-right text-xs font-medium text-slate-500">{comment.trim().length}/300</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">Quick emojis:</span>
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => appendEmoji(emoji)}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-base leading-none transition hover:bg-orange-50"
+                    aria-label={`Add ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-right text-xs font-medium text-slate-500">{commentLength}/300</p>
             </div>
 
             {errorMessage && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{errorMessage}</p>}
