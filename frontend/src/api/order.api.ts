@@ -1,10 +1,13 @@
 import axiosClient from './axiosClient';
 
-export interface OrderItemPayload {
+export interface OrderItemInput {
+  mealId?: string;
   name: string;
   quantity: number;
   price: number;
 }
+
+export type OrderItemPayload = OrderItemInput;
 
 export interface CreateOrderRequest {
   items?: OrderItemPayload[];
@@ -12,9 +15,11 @@ export interface CreateOrderRequest {
   paymentMethod?: 'Cash' | 'PayPal' | 'QRCode';
 }
 
+export type CreateOrderPayload = CreateOrderRequest;
+
 export const orderApi = {
-  createOrder: async (data?: CreateOrderRequest) => {
-    const response = await axiosClient.post('/orders', data || {});
+  createOrder: async (payload: CreateOrderRequest = {}) => {
+    const response = await axiosClient.post('/orders', payload);
     return response.data;
   },
 
