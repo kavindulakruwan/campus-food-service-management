@@ -23,6 +23,7 @@ import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminMealManagementPage from './pages/admin/AdminMealManagementPage'
 import AdminPaymentDashboard from './pages/admin/AdminPaymentDashboard'
 import AdminUserManagementPage from './pages/admin/AdminUserManagementPage'
+import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import RoleRoute from './routes/RoleRoute'
@@ -57,6 +58,9 @@ function App() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/payments/history" element={<PaymentsPage />} />
+            <Route path="/payments/pending" element={<PaymentsPage />} />
+            <Route path="/payments/paid" element={<PaymentsPage />} />
+            <Route path="/payments/refunded" element={<PaymentsPage />} />
             <Route path="/payments/receipt/:id" element={<DigitalReceiptPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route
@@ -80,6 +84,10 @@ function App() {
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminMealManagementPage />
+              path="admin/settings"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminSettingsPage />
                 </RoleRoute>
               )}
             />

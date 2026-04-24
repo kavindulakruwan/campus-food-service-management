@@ -8,6 +8,9 @@ const DigitalReceipt: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const isPendingInvoice = receiptData?.status === 'Pending';
+  const documentTitle = isPendingInvoice ? 'INVOICE' : 'RECEIPT';
+
   useEffect(() => {
     if (id) {
       paymentApi.getReceipt(id)
@@ -34,7 +37,7 @@ const DigitalReceipt: React.FC = () => {
       <div className="max-w-xl w-full bg-white shadow-lg rounded-2xl overflow-hidden print:shadow-none print:w-full print:max-w-none">
         {/* Receipt Header */}
         <div className="bg-blue-600 px-8 py-10 text-white text-center">
-          <h2 className="text-3xl font-bold tracking-wider">RECEIPT</h2>
+          <h2 className="text-3xl font-bold tracking-wider">{documentTitle}</h2>
           <p className="opacity-80 mt-2 text-sm">Transaction # {receiptData.transactionId || receiptData._id}</p>
         </div>
 
@@ -82,7 +85,7 @@ const DigitalReceipt: React.FC = () => {
 
           {/* Total */}
           <div className="flex justify-between items-center pt-4">
-            <p className="text-lg font-bold text-gray-800">Total Paid</p>
+            <p className="text-lg font-bold text-gray-800">{isPendingInvoice ? 'Total Due' : 'Total Paid'}</p>
             <p className="text-2xl font-bold text-blue-600">${receiptData.amount.toFixed(2)}</p>
           </div>
         </div>
