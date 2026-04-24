@@ -75,12 +75,9 @@ exports.createOrder = async (req, res) => {
     }
 
     const totalAmount = Number(req.body?.totalAmount);
-    const safeTotalAmount = Number.isFinite(totalAmount) && totalAmount > 0
+    const finalTotal = Number.isFinite(totalAmount) && totalAmount > 0
       ? totalAmount
-      : items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const items = normalizeItems(req.body.items);
-    const totalAmount = Number(req.body.totalAmount);
-    const finalTotal = Number.isFinite(totalAmount) && totalAmount > 0 ? totalAmount : calculateTotal(items);
+      : calculateTotal(items);
     const paymentMethod = ['Cash', 'PayPal', 'QRCode'].includes(req.body.paymentMethod)
       ? req.body.paymentMethod
       : 'Cash';
@@ -88,7 +85,6 @@ exports.createOrder = async (req, res) => {
     const order = await Order.create({
       user: req.user.id,
       items,
-      totalAmount: safeTotalAmount,
       totalAmount: finalTotal,
       status: 'Pending',
       paymentStatus: 'Pending',

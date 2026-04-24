@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentApi, type PaymentInitiateRequest } from '../../api/payment.api';
@@ -164,8 +163,6 @@ const CheckoutPage: React.FC = () => {
                  <p className="text-3xl font-bold text-gray-900">${Number(paypalAmount).toFixed(2)}</p>
                </div>
                <PayPalScriptProvider options={{ clientId: "test", currency: "USD", intent: "capture" }}>
-                  <PayPalButtons 
-                    createOrder={(_data, actions) => {
                  <PayPalButtons 
                      createOrder={(_data, actions) => {
                       return actions.order.create({

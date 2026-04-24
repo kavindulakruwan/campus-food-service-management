@@ -84,6 +84,10 @@ function App() {
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminMealManagementPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
               path="admin/settings"
               element={(
                 <RoleRoute roles={['admin']}>
