@@ -12,7 +12,7 @@ import {
   Cell,
   ResponsiveContainer
 } from 'recharts';
-import { Activity, Flame, Utensils, Weight, Award, Target, DollarSign, CheckCircle, TrendingUp } from 'lucide-react';
+import { Activity, Flame, Utensils, Award, Target, DollarSign, TrendingUp } from 'lucide-react';
 import { startOfWeek, format, parseISO, isSameDay, addDays } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';

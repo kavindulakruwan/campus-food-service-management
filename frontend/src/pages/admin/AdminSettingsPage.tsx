@@ -51,16 +51,6 @@ const AdminSettingsPage = () => {
     return `${settings.defaultLanguage} / ${settings.timeZone}`
   }, [settings])
 
-  const toggleSetting = (key: keyof AdminSettingsState) => {
-    setSettings((current) => {
-      const value = current[key]
-      if (typeof value === 'boolean') {
-        return { ...current, [key]: !value } as AdminSettingsState
-      }
-      return current
-    })
-  }
-
   const updateSetting = <K extends keyof AdminSettingsState>(key: K, value: AdminSettingsState[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
   }
