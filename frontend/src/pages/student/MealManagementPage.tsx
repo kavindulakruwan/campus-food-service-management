@@ -12,7 +12,7 @@ import {
   Cell,
   ResponsiveContainer
 } from 'recharts';
-import { Activity, Flame, Utensils, Weight, Award } from 'lucide-react';
+import { Activity, Flame, Utensils, Award, Target, DollarSign, TrendingUp } from 'lucide-react';
 import { startOfWeek, format, parseISO, isSameDay, addDays } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -189,244 +189,331 @@ Kokis | 80g | 250 | N/A | N/A | N/A
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-12">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
-          <Activity className="text-orange-500 w-8 h-8" />
-          Meal <span className="text-orange-500">Management & Analytics</span>
-        </h1>
-        <p className="mt-2 text-slate-500 font-medium text-lg">
-          Track campus dining trends and generate personalized AI diet plans.
-        </p>
+    <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8 bg-slate-50 min-h-screen dark:bg-slate-900 transition-colors duration-200">
+      
+      {/* Page Header & Actions */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Management & Diet
+            </h1>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+              Pro Access
+            </span>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm sm:text-base">
+            Track your campus dining trends, manage health goals, and generate AI meal plans.
+          </p>
+        </div>
       </div>
 
-      {/* Analytics Section */}
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
-         <h2 className="text-2xl font-bold text-slate-800 mb-8 flex items-center gap-2">
-            <Award className="text-sky-500" /> Popular Meals Breakdown
-         </h2>
-         
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Bar Chart: Weekly Trend */}
-            <div className="bg-[#Fdfbf7] p-6 rounded-2xl border border-slate-50">
-               <h3 className="text-lg font-bold text-slate-700 mb-6 text-center">Weekly Consumption Trends</h3>
-               <div className="h-80 w-full">
+      {/* Top Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Calories Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700/60 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="font-semibold text-slate-600 dark:text-slate-300">Daily Calories</h3>
+            </div>
+            <span className="text-xs font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-md">
+              On Track
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">2,150</span>
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">/ 2,500 kcal</span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mt-4 overflow-hidden">
+            <div className="bg-orange-500 h-2 rounded-full" style={{ width: '86%' }}></div>
+          </div>
+        </div>
+
+        {/* Macros Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700/60 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                <Target className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+              </div>
+              <h3 className="font-semibold text-slate-600 dark:text-slate-300">Macro Targets</h3>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mt-2">
+            <div className="flex flex-col">
+              <span className="text-xs text-slate-400 font-medium mb-1">Protein</span>
+              <span className="font-bold text-slate-800 dark:text-slate-100">120g</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-slate-400 font-medium mb-1">Carbs</span>
+              <span className="font-bold text-slate-800 dark:text-slate-100">240g</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-slate-400 font-medium mb-1">Fats</span>
+              <span className="font-bold text-slate-800 dark:text-slate-100">65g</span>
+            </div>
+          </div>
+          <div className="flex h-2 w-full rounded-full overflow-hidden mt-4">
+            <div className="bg-sky-500 w-1/3"></div>
+            <div className="bg-emerald-500 w-1/2"></div>
+            <div className="bg-amber-400 w-1/6"></div>
+          </div>
+        </div>
+
+        {/* Budget Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700/60 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="font-semibold text-slate-600 dark:text-slate-300">Weekly Budget</h3>
+            </div>
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">
+              Safe
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">LKR 4,250</span>
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">left</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-4 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3 text-emerald-500" /> 12% less spending than last week
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Left Column: Analytics & Charts */}
+        <div className="xl:col-span-2 space-y-8">
+          
+          {/* Analytics Container */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700/60 transition-all hover:shadow-md">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Activity className="text-indigo-500 w-6 h-6" /> 
+                Dining Analytics
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Bar Chart: Weekly Trend */}
+              <div className="bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-6">Weekly Consumption</h3>
+                <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={weeklyMealData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B'}} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
                       <Tooltip 
-                         cursor={{fill: 'transparent'}}
-                         contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}} 
+                        cursor={{fill: 'rgba(226, 232, 240, 0.4)'}}
+                        contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', backgroundColor: 'rgba(255, 255, 255, 0.95)'}} 
                       />
-                      <Legend iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
-                      <Bar dataKey="breakfast" name="Breakfast" stackId="a" fill="#f97316" radius={[0, 0, 4, 4]} />
-                      <Bar dataKey="lunch" name="Lunch" stackId="a" fill="#0ea5e9" />
-                      <Bar dataKey="dinner" name="Dinner" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '12px'}} />
+                      <Bar dataKey="breakfast" name="Breakfast" stackId="a" fill="#f97316" radius={[0, 0, 4, 4]} barSize={24} />
+                      <Bar dataKey="lunch" name="Lunch" stackId="a" fill="#38bdf8" barSize={24} />
+                      <Bar dataKey="dinner" name="Dinner" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
                     </BarChart>
                   </ResponsiveContainer>
-               </div>
-            </div>
+                </div>
+              </div>
 
-            {/* Pie Chart: Monthly Most Pop */}
-            <div className="bg-[#Fdfbf7] p-6 rounded-2xl border border-slate-50">
-               <h3 className="text-lg font-bold text-slate-700 mb-6 text-center">Monthly Top Campus Dishes</h3>
-               <div className="h-80 w-full">
+              {/* Pie Chart: Monthly Most Pop */}
+              <div className="bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-6">Your Top Dishes</h3>
+                <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={monthlyPopularMeals}
                         cx="50%"
                         cy="50%"
-                        innerRadius={80}
-                        outerRadius={120}
+                        innerRadius={60}
+                        outerRadius={90}
                         paddingAngle={5}
                         dataKey="value"
+                        stroke="none"
                       >
                         {monthlyPopularMeals.map((_entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip 
-                         contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}} 
+                        contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)'}} 
                       />
-                      <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" />
+                      <Legend iconType="circle" layout="horizontal" verticalAlign="bottom" wrapperStyle={{fontSize: '12px', paddingTop: '20px'}} />
                     </PieChart>
                   </ResponsiveContainer>
-               </div>
+                </div>
+              </div>
             </div>
-         </div>
-      </div>
+          </div>
 
-      {/* AI Calorie & Diet Planner Section */}
-      <div className="bg-gradient-to-br from-orange-50 to-rose-50 rounded-3xl p-8 shadow-sm border border-orange-100">
-         <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-            <Flame className="text-orange-500" /> AI Calorie Counter & Diet Planner
-         </h2>
-         <p className="text-slate-600 mb-8 max-w-3xl">
-           Enter your body metrics and daily food preferences. Our AI will analyze your profile and suggest the best campus meals tailored specifically for your health goals.
-         </p>
+          {/* AI Calorie & Diet Planner Form */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700/60">
+             <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-rose-100 dark:bg-rose-900/30 rounded-xl">
+                   <Utensils className="text-rose-600 dark:text-rose-400 w-6 h-6" />
+                </div>
+                <div>
+                   <h2 className="text-xl font-bold text-slate-800 dark:text-white">AI Diet Architect</h2>
+                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Configure your metrics to generate a personalized campus meal plan.</p>
+                </div>
+             </div>
 
-         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            
-            {/* Form */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-white/60 lg:col-span-2">
-               <form onSubmit={handleDietSubmit} className="space-y-5">
-                  
-                  {/* Basic Demographics */}
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Age</label>
-                        <input 
-                           type="number" 
-                           required 
-                           value={age}
-                           onChange={(e) => setAge(e.target.value)}
-                           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                           placeholder="e.g. 21"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Gender</label>
-                        <select 
-                           value={gender}
-                           onChange={(e) => setGender(e.target.value)}
-                           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white transition-all"
-                        >
-                           <option value="male">Male</option>
-                           <option value="female">Female</option>
-                        </select>
-                     </div>
-                  </div>
+             <form onSubmit={handleDietSubmit} className="space-y-6">
+                {/* Form Group 1: Basics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Age</label>
+                      <input 
+                         type="number" required value={age} onChange={(e) => setAge(e.target.value)}
+                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                         placeholder="e.g. 21"
+                      />
+                   </div>
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Gender</label>
+                      <select 
+                         value={gender} onChange={(e) => setGender(e.target.value)}
+                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                      >
+                         <option value="male">Male</option>
+                         <option value="female">Female</option>
+                      </select>
+                   </div>
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Weight <span className="text-slate-400 normal-case">(kg)</span></label>
+                      <input 
+                         type="number" required value={weight} onChange={(e) => setWeight(e.target.value)}
+                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                         placeholder="e.g. 70"
+                      />
+                   </div>
+                </div>
 
-                  {/* Body Metrics */}
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                           <Weight className="w-4 h-4 text-slate-400" /> Weight (kg)
-                        </label>
-                        <input 
-                           type="number" 
-                           required 
-                           value={weight}
-                           onChange={(e) => setWeight(e.target.value)}
-                           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                           placeholder="e.g. 70"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Height (cm)</label>
-                        <input 
-                           type="number" 
-                           required 
-                           value={height}
-                           onChange={(e) => setHeight(e.target.value)}
-                           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                           placeholder="e.g. 175"
-                        />
-                     </div>
-                  </div>
+                {/* Form Group 2: Goals */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Height <span className="text-slate-400 normal-case">(cm)</span></label>
+                      <input 
+                         type="number" required value={height} onChange={(e) => setHeight(e.target.value)}
+                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                         placeholder="e.g. 175"
+                      />
+                   </div>
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Primary Goal</label>
+                      <select 
+                         value={goal} onChange={(e) => setGoal(e.target.value)}
+                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                      >
+                         <option value="lose weight">Lose Weight (Deficit)</option>
+                         <option value="maintain">Maintain Weight</option>
+                         <option value="build muscle">Build Muscle (Surplus)</option>
+                      </select>
+                   </div>
+                </div>
 
-                  {/* Health Goal */}
-                  <div className="grid grid-cols-2 gap-4">
-                     <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Health Goal</label>
-                        <select 
-                           value={goal}
-                           onChange={(e) => setGoal(e.target.value)}
-                           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white transition-all"
-                        >
-                           <option value="lose weight">Lose Weight (Caloric Deficit)</option>
-                           <option value="maintain">Maintain Weight</option>
-                           <option value="build muscle">Build Muscle (Caloric Surplus)</option>
-                        </select>
-                     </div>
-                     <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Activity Level</label>
-                        <select 
-                           value={activityLevel}
-                           onChange={(e) => setActivityLevel(e.target.value)}
-                           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white transition-all text-sm"
-                        >
-                           <option value="sedentary">Sedentary (Little to no exercise)</option>
-                           <option value="lightly active">Lightly Active (1-3 days/week)</option>
-                           <option value="moderately active">Moderately Active (3-5 days/week)</option>
-                           <option value="very active">Very Active (6-7 days/week)</option>
-                        </select>
-                     </div>
-                  </div>
-                  
-                  {/* Preferences */}
-                  <div className="pt-2 border-t border-slate-100">
-                     <label className="block text-sm font-semibold text-slate-700 mb-1">Food Preferences</label>
+                {/* Form Group 3: Activity & Prefs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Activity Level</label>
+                      <select 
+                         value={activityLevel} onChange={(e) => setActivityLevel(e.target.value)}
+                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                      >
+                         <option value="sedentary">Sedentary (Little/No)</option>
+                         <option value="lightly active">Lightly Active (1-3 days/wk)</option>
+                         <option value="moderately active">Moderately Active (3-5 days/wk)</option>
+                         <option value="very active">Very Active (6-7 days/wk)</option>
+                      </select>
+                   </div>
+                   <div>
+                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Dietary Preferences</label>
                      <input 
-                        type="text" 
-                        required
-                        value={preferences}
-                        onChange={(e) => setPreferences(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                        placeholder="e.g. High protein, Low carb, Vegetarian"
+                        type="text" required value={preferences} onChange={(e) => setPreferences(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                        placeholder="e.g. High protein, Low carb, Veg"
                      />
-                  </div>
+                   </div>
+                </div>
 
-                  <div>
-                     <label className="block text-sm font-semibold text-slate-700 mb-1">Allergies (Optional)</label>
-                     <input 
-                        type="text" 
-                        value={allergies}
-                        onChange={(e) => setAllergies(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                        placeholder="e.g. Peanuts, Dairy"
-                     />
-                  </div>
+                <div>
+                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Allergies (Optional)</label>
+                   <input 
+                      type="text" value={allergies} onChange={(e) => setAllergies(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                      placeholder="e.g. Peanuts, Dairy"
+                   />
+                </div>
 
+                <div className="pt-2">
                   <button 
-                     type="submit" 
-                     disabled={loading}
-                     className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md shadow-orange-500/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                     type="submit" disabled={loading}
+                     className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-rose-600 dark:hover:bg-rose-500 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                      {loading ? (
                         <>
                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                           Analyzing Profile...
+                           <span>Crunching Numbers...</span>
                         </>
                      ) : (
                         <>
-                           <Utensils className="w-5 h-5" /> Generate AI Diet Plan
+                           <Flame className="w-5 h-5 text-rose-400 dark:text-rose-200" /> 
+                           <span>Generate Action Plan</span>
                         </>
                      )}
                   </button>
-               </form>
-            </div>
+                </div>
+             </form>
+          </div>
 
-            {/* AI Results Display */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-white/60 lg:col-span-3 min-h-[300px] flex flex-col">
-               <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">Your Personalized Plan</h3>
-               
-               <div className="flex-1 rounded-xl bg-[#Fdfbf7] p-5 border border-slate-100 text-slate-700 leading-relaxed overflow-y-auto max-h-[500px]">
-                  {aiSuggestion ? (
-                     <div className="prose prose-slate prose-orange max-w-none prose-table:w-full prose-table:border-collapse prose-th:bg-orange-100/50 prose-th:p-3 prose-th:text-left prose-th:text-slate-800 prose-td:p-3 prose-td:border-b prose-td:border-slate-200 prose-ul:list-disc prose-ul:pl-5 prose-h3:text-xl prose-h3:font-bold prose-h3:text-orange-600 prose-h3:mt-6 prose-h3:mb-3 prose-p:mb-4">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                           {aiSuggestion}
-                        </ReactMarkdown>
-                     </div>
-                  ) : (
-                     <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-70">
-                        <Flame className="w-12 h-12 mb-3 text-orange-200" />
-                        <p className="font-medium text-center">Submit your metrics on the left<br/>to receive an AI generated student meal plan.</p>
-                     </div>
-                  )}
-               </div>
-            </div>
+        </div>
 
-         </div>
+        {/* Right Column: AI Results & Details */}
+        <div className="xl:col-span-1">
+          <div className="bg-gradient-to-br from-rose-50 to-orange-50 dark:from-slate-800 dark:to-slate-800 rounded-3xl p-6 shadow-sm border border-rose-100 dark:border-slate-700/60 sticky top-8 h-[calc(100vh-8rem)] min-h-[600px] flex flex-col">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-rose-200/50 dark:border-slate-700">
+               <Award className="text-rose-500 w-6 h-6" />
+               <h3 className="text-xl font-bold text-slate-800 dark:text-white">Your AI Plan</h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+               {aiSuggestion ? (
+                  <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert prose-rose max-w-none 
+                        prose-table:w-full prose-table:border-collapse prose-table:text-sm
+                        prose-th:bg-white dark:prose-th:bg-slate-900 prose-th:p-3 prose-th:text-left prose-th:font-semibold
+                        prose-td:p-3 prose-td:border-b prose-td:border-rose-100 dark:prose-td:border-slate-700
+                        prose-ul:list-disc prose-ul:pl-5 
+                        prose-h3:text-lg prose-h3:font-bold prose-h3:text-rose-700 dark:prose-h3:text-rose-400 prose-h3:mt-6 prose-h3:mb-3 
+                        prose-p:mb-4 bg-white/60 dark:bg-slate-900/40 p-5 rounded-2xl backdrop-blur-sm border border-white/50 dark:border-slate-700/50">
+                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {aiSuggestion}
+                     </ReactMarkdown>
+                  </div>
+               ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-center px-6">
+                     <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center mb-6 shadow-sm border border-rose-100 dark:border-slate-700">
+                        <Target className="w-10 h-10 text-rose-300 dark:text-rose-500 opacity-80" />
+                     </div>
+                     <h4 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">No Plan Active</h4>
+                     <p className="font-medium text-sm leading-relaxed">
+                        Fill out your dietary profile on the left and hit generate to receive your scientifically-backed campus meal schedule.
+                     </p>
+                  </div>
+               )}
+            </div>
+          </div>
+        </div>
       </div>
-
     </div>
   );
 };

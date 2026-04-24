@@ -24,32 +24,50 @@ const paymentStatusConfig: Record<string, { bg: string; text: string; icon: Reac
   Pending: { bg: 'bg-red-50', text: 'text-red-700', icon: <AlertCircle className="w-3.5 h-3.5" /> },
 };
 
-const OrdersPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+type CategoryFilter = 'all' | MealItem['category']
+type OrderStatusFilter = 'all' | 'Pending' | 'Processing' | 'Ready' | 'Completed'
+type PaymentMethod = 'Cash' | 'PayPal' | 'QRCode'
+type OrderCartItem = MealItem & { quantity: number }
 
-  const handleCreateOrder = async () => {
-    setCreating(true);
+const categoryOptions: Array<{ label: string; value: CategoryFilter }> = [
+  { label: 'All', value: 'all' },
+  { label: 'Breakfast', value: 'breakfast' },
+  { label: 'Lunch', value: 'lunch' },
+  { label: 'Dinner', value: 'dinner' },
+  { label: 'Snack', value: 'snack' },
+  { label: 'Beverage', value: 'beverage' },
+]
+
+const OrdersPage = () => {
+  const navigate = useNavigate()
+
+  const [meals, setMeals] = useState<MealItem[]>([])
+  const [cart, setCart] = useState<OrderCartItem[]>([])
+  const [orders, setOrders] = useState<any[]>([])
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<CategoryFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash')
+  const [loadingMeals, setLoadingMeals] = useState(false)
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [placingOrder, setPlacingOrder] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadOrders = async () => {
     try {
-      await orderApi.createOrder();
-      const res = await orderApi.getMyOrders();
-      setOrders(res.data || []);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to create order');
+      const response = await orderApi.getMyOrders()
+      setOrders(response.data || [])
+    } catch (fetchError) {
+      console.error(fetchError)
+      setError('Unable to load your orders right now.')
     } finally {
-      setCreating(false);
+      setLoadingOrders(false)
     }
-  };
+  }
 
   useEffect(() => {
-    orderApi.getMyOrders()
-      .then(res => setOrders(res.data || []))
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
+    void loadOrders()
+  }, [])
 
   if (loading) {
     return (
@@ -188,4 +206,119 @@ const OrdersPage: React.FC = () => {
   );
 };
 
-export default OrdersPage;
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-4 py-3 font-semibold text-slate-800">Available Meals</div>
+            <div className="space-y-3 p-4">
+              {loadingMeals ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading meals...
+                </div>
+              ) : meals.length === 0 ? (
+                <div className="text-sm text-slate-500">No meals found for your filter.</div>
+              ) : (
+                meals.map((meal) => (
+                  <div key={meal.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">{meal.name}</p>
+                      <p className="text-sm text-slate-500">{meal.category} · ${meal.price.toFixed(2)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(meal)}
+                      className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-4 py-3 font-semibold text-slate-800">Cart</div>
+            <div className="space-y-3 p-4">
+              {cart.length === 0 ? (
+                <div className="text-sm text-slate-500">Your cart is empty.</div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-slate-100 px-3 py-2">
+                    <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="text-xs text-slate-500">${(item.price * item.quantity).toFixed(2)}</p>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => updateQuantity(item.id, -1)} className="rounded bg-slate-100 p-1 hover:bg-slate-200">
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-6 text-center text-sm">{item.quantity}</span>
+                        <button type="button" onClick={() => updateQuantity(item.id, 1)} className="rounded bg-slate-100 p-1 hover:bg-slate-200">
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                <p className="flex items-center justify-between text-sm text-slate-600">
+                  <span>Subtotal</span>
+                  <span className="font-semibold text-slate-900">${subtotal.toFixed(2)}</span>
+                </p>
+                <select
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="PayPal">PayPal</option>
+                  <option value="QRCode">QRCode</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleCreateOrder}
+                  disabled={placingOrder}
+                  className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {placingOrder ? 'Placing order...' : 'Place Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-4 py-3 font-semibold text-slate-800">My Orders</div>
+            <div className="space-y-3 p-4">
+              {loadingOrders ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Clock3 className="h-4 w-4" />
+                  Loading orders...
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <ShoppingBag className="h-4 w-4" />
+                  No orders available.
+                </div>
+              ) : (
+                filteredOrders.map((order) => (
+                  <div key={order._id || order.id} className="rounded-xl border border-slate-100 px-3 py-2">
+                    <p className="text-sm font-semibold text-slate-900">Order #{order._id || order.id}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs">
+                      <span className={`rounded-full px-2 py-1 font-medium ${getStatusClass(order.status)}`}>{order.status || 'Pending'}</span>
+                      <span className="font-semibold text-slate-700">${Number(order.totalAmount || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default OrdersPage

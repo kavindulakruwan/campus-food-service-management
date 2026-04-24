@@ -1,8 +1,25 @@
 import axiosClient from './axiosClient';
 
+export interface OrderItemInput {
+  mealId?: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export type OrderItemPayload = OrderItemInput;
+
+export interface CreateOrderRequest {
+  items?: OrderItemPayload[];
+  totalAmount?: number;
+  paymentMethod?: 'Cash' | 'PayPal' | 'QRCode';
+}
+
+export type CreateOrderPayload = CreateOrderRequest;
+
 export const orderApi = {
-  createOrder: async () => {
-    const response = await axiosClient.post('/orders');
+  createOrder: async (payload: CreateOrderRequest = {}) => {
+    const response = await axiosClient.post('/orders', payload);
     return response.data;
   },
 

@@ -14,32 +14,53 @@ import {
 
 const CheckoutPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [method, setMethod] = useState<'PayPal' | 'QRCode'>('PayPal');
+  const requestedMethod = searchParams.get('method');
+  const orderId = searchParams.get('orderId') || undefined;
+  const [method, setMethod] = useState<'PayPal' | 'QRCode'>(() => (
+    requestedMethod === 'QRCode' ? 'QRCode' : 'PayPal'
+  ));
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState('');
-
   // States for real PayPal flow
   const [paypalAmount, setPaypalAmount] = useState<string | null>(null);
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const isMethodLocked = requestedMethod === 'PayPal' || requestedMethod === 'QRCode';
 
-  const handlePayment = async () => {
+  useEffect(() => {
+    if (requestedMethod === 'QRCode') {
+      setMethod('QRCode');
+    } else if (requestedMethod === 'PayPal') {
+      setMethod('PayPal');
+    }
+  }, [requestedMethod]);
+
+  const handlePayment = async (selectedMethod: 'PayPal' | 'QRCode') => {
+    if (!orderId) {
+      setError('Order not found. Please place an order first.');
+      return;
+    }
+
     setLoading(true);
     setError('');
+    setQrCode(null);
+    setPaypalAmount(null);
+
     const request: PaymentInitiateRequest = {
-      method,
-      orderId: searchParams.get('orderId') || undefined
+      method: selectedMethod,
+      orderId,
     };
 
     try {
       const response = await paymentApi.initiate(request);
-      if (method === 'PayPal') {
+      if (selectedMethod === 'PayPal') {
         setPaypalAmount(response.amount.toString());
         setCurrentPaymentId(response.paymentId);
-      } else if (method === 'QRCode') {
+      } else if (selectedMethod === 'QRCode') {
         setQrCode(response.qrData);
+        setCurrentPaymentId(response.paymentId);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to initiate payment');
@@ -47,6 +68,20 @@ const CheckoutPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (requestedMethod === 'Cash') {
+      setError('Cash payment is collected on delivery. No online gateway is required.');
+      return;
+    }
+
+    if (!isMethodLocked || !orderId || autoStarted) {
+      return;
+    }
+
+    setAutoStarted(true);
+    handlePayment(method);
+  }, [autoStarted, isMethodLocked, method, orderId]);
 
   const verifyQR = async () => {
     alert('QR Code Scanned and Payment Processed (Simulated)');

@@ -12,8 +12,13 @@ const RoleRoute = ({ roles, children }: RoleRouteProps) => {
   const { user } = useAuth()
   const location = useLocation()
 
-  if (!user || !roles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace state={{ from: location }} />
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (!roles.includes(user.role)) {
+    const fallbackPath = user.role === 'admin' ? '/admin' : '/dashboard'
+    return <Navigate to={fallbackPath} replace state={{ from: location }} />
   }
 
   return <>{children}</>

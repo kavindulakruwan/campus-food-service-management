@@ -28,6 +28,9 @@ const DigitalReceipt: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const isPendingInvoice = receiptData?.status === 'Pending';
+  const documentTitle = isPendingInvoice ? 'INVOICE' : 'RECEIPT';
+
   useEffect(() => {
     if (id) {
       paymentApi.getReceipt(id)

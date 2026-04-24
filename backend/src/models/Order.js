@@ -32,6 +32,11 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['Pending', 'Paid', 'Failed', 'Refunded'],
     default: 'Pending'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['Cash', 'PayPal', 'QRCode'],
+    default: 'Cash'
   }
 }, { timestamps: true });
 

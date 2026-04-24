@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentApi } from '../../api/payment.api';
 import {
   Search,
@@ -55,8 +55,74 @@ const PaymentsPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    paymentApi.getHistory()
-      .then(res => setPayments(res.data || []))
+    if (location.pathname === '/payments/pending') {
+      setActiveFilter('Pending');
+      return;
+    }
+
+    if (location.pathname === '/payments/paid') {
+      setActiveFilter('Paid');
+      return;
+    }
+
+    if (location.pathname === '/payments/refunded') {
+      setActiveFilter('Refunded');
+      return;
+    }
+
+    const requestedFilter = searchParams.get('filter');
+
+    if (requestedFilter === 'Pending' || requestedFilter === 'Paid' || requestedFilter === 'Refunded' || requestedFilter === 'All') {
+      setActiveFilter(requestedFilter);
+      return;
+    }
+
+    if (requestedFilter === 'Completed') {
+      setActiveFilter('Paid');
+      return;
+    }
+
+    setActiveFilter('All');
+  }, [location.pathname, searchParams]);
+
+  useEffect(() => {
+    Promise.all([paymentApi.getHistory(), orderApi.getMyOrders()])
+      .then(([paymentRes, orderRes]) => {
+        const paymentRows = paymentRes.data || [];
+        const orders = orderRes.data || [];
+
+        const orderIdsWithPayment = new Set(
+          paymentRows
+            .map((payment: any) => (payment.order?._id || payment.order || '').toString())
+            .filter(Boolean)
+        );
+
+        const mappedOrdersWithoutPayment = orders
+          .filter((order: any) => !orderIdsWithPayment.has(String(order._id)))
+          .map((order: any) => ({
+            _id: `order-${order._id}`,
+            transactionId: order.orderNumber || order._id,
+            method: order.paymentMethod || 'Cash',
+            amount: Number(order.totalAmount || 0),
+            status:
+              order.paymentStatus === 'Paid'
+                ? 'Completed'
+                : order.paymentStatus === 'Refunded'
+                  ? 'Refunded'
+                  : order.paymentStatus === 'Failed'
+                    ? 'Failed'
+                    : 'Pending',
+            createdAt: order.createdAt,
+            order: order._id,
+            orderId: order._id,
+            isSyntheticOrderPayment: true,
+          }));
+
+        const mergedRows = [...paymentRows, ...mappedOrdersWithoutPayment]
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        setPayments(mergedRows);
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);

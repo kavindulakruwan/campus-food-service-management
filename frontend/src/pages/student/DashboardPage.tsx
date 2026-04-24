@@ -21,6 +21,15 @@ const modules = [
     bg: 'bg-orange-50',
   },
   {
+    title: 'Meal Management',
+    owner: 'Member 1',
+    path: '/meals',
+    summary: 'Browse meal items, search by keywords and price, and check availability.',
+    icon: 'M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z',
+    color: 'text-teal-600',
+    bg: 'bg-teal-50',
+  },
+  {
     title: 'Pantry Alerts',
     owner: 'Member 3',
     path: '/pantry',
@@ -48,6 +57,34 @@ const recentActivity = [
 
 const DashboardPage = () => {
   const { user } = useAuth()
+
+  const resolvedModules = modules.map((module) => {
+    if (module.title === 'User & Profile' && user?.role === 'admin') {
+      return {
+        ...module,
+        path: '/admin/users',
+        summary: 'Admin user management: view, search, add, edit, reset, enable/disable, and delete users.',
+      }
+    }
+
+    if (module.title === 'Meal Planning' && user?.role === 'admin') {
+      return {
+        ...module,
+        path: '/meal-plans',
+        summary: 'Weekly schedule creation, favorites, and meal reviews.',
+      }
+    }
+
+    if (module.title === 'Meal Management' && user?.role === 'admin') {
+      return {
+        ...module,
+        path: '/admin/meal-management',
+        summary: 'Admin meal management: add, edit, delete, categorize, and mark availability.',
+      }
+    }
+
+    return module
+  })
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -85,7 +122,7 @@ const DashboardPage = () => {
           </div>
           
           <div className="grid sm:grid-cols-2 gap-5">
-            {modules.map((module) => (
+            {resolvedModules.map((module) => (
               <article 
                 key={module.title} 
                 className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-slate-300"
