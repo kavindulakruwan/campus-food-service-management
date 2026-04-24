@@ -103,4 +103,9 @@ const mealItemSchema = new mongoose.Schema({
   },
 }, { timestamps: true })
 
+// Indexes for common listing filters and newest-first sorting.
+mealItemSchema.index({ createdAt: -1 })
+mealItemSchema.index({ category: 1, isAvailable: 1, createdAt: -1 })
+mealItemSchema.index({ price: 1, createdAt: -1 })
+
 module.exports = mongoose.model('MealItem', mealItemSchema)

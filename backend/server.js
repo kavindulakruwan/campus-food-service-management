@@ -151,20 +151,35 @@ const findAvailablePort = (startPort, maxAttempts = 20) =>
     tryPort()
   })
 
+let reconnectAttempts = 0
+const MAX_RECONNECT_ATTEMPTS = 24 // 24 * 10s = 4 minutes of retries
+
 const startMongoReconnectLoop = () => {
   setInterval(async () => {
-    if (getMongoStatus().connected || reconnectInProgress) return
+    if (getMongoStatus().connected || reconnectInProgress) {
+      reconnectAttempts = 0 // Reset on successful connection
+      return
+    }
+
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.error('[ERROR] MongoDB reconnect max attempts reached. Manual intervention required.')
+      return
+    }
 
     reconnectInProgress = true
+    reconnectAttempts += 1
+    
     try {
       await connectDB()
-      console.log('[INFO] MongoDB reconnected successfully.')
+      console.log('[INFO] MongoDB reconnected successfully. Attempts reset.')
+      reconnectAttempts = 0
     } catch (error) {
-      console.warn(`[WARN] MongoDB reconnect failed: ${error.message}`)
+      const delayUntilNextAttempt = (MAX_RECONNECT_ATTEMPTS - reconnectAttempts) * 10
+      console.warn(`[WARN] MongoDB reconnect failed (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}): ${error.message}. Retrying in 10s... (${delayUntilNextAttempt}s remaining before giving up)`)
     } finally {
       reconnectInProgress = false
     }
-  }, 15000)
+  }, 10000) // Reconnect every 10 seconds instead of 15
 }
 
 const start = async () => {

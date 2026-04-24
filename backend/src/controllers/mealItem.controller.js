@@ -42,24 +42,54 @@ const toOffer = (offer = {}) => {
   }
 }
 
-const toMealItem = (item) => ({
-  ...getReviewSummary(item.reviews),
-  id: item._id.toString(),
-  name: item.name,
-  category: item.category,
-  price: item.price,
-  quantity: Number.isFinite(item.quantity) ? item.quantity : (item.isAvailable ? 1 : 0),
-  calories: item.calories,
-  description: item.description || '',
-  imageUrl: item.imageUrl || '',
-  isAvailable: item.isAvailable,
-  offer: toOffer(item.offer),
-  discountedPrice: toOffer(item.offer).type === 'discount'
-    ? Number((item.price * (1 - (toOffer(item.offer).discountPercent / 100))).toFixed(2))
-    : item.price,
-  createdAt: item.createdAt,
-  updatedAt: item.updatedAt,
-})
+const toDiscountedPrice = (price, offer) => (
+  offer.type === 'discount'
+    ? Number((price * (1 - (offer.discountPercent / 100))).toFixed(2))
+    : price
+)
+
+const toMealItem = (item) => {
+  const offer = toOffer(item.offer)
+  return {
+    ...getReviewSummary(item.reviews),
+    id: item._id.toString(),
+    name: item.name,
+    category: item.category,
+    price: item.price,
+    quantity: Number.isFinite(item.quantity) ? item.quantity : (item.isAvailable ? 1 : 0),
+    calories: item.calories,
+    description: item.description || '',
+    imageUrl: item.imageUrl || '',
+    isAvailable: item.isAvailable,
+    offer,
+    discountedPrice: toDiscountedPrice(item.price, offer),
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }
+}
+
+const toMealItemFromAggregate = (item) => {
+  const offer = toOffer(item.offer)
+  return {
+    averageRating: Number((Number(item.averageRating || 0)).toFixed(1)),
+    reviewCount: Number(item.reviewCount || 0),
+    id: item._id.toString(),
+    name: item.name,
+    category: item.category,
+    price: item.price,
+    quantity: Number.isFinite(item.quantity) ? item.quantity : (item.isAvailable ? 1 : 0),
+    calories: item.calories,
+    description: item.description || '',
+    imageUrl: item.imageUrl || '',
+    isAvailable: item.isAvailable,
+    offer,
+    discountedPrice: toDiscountedPrice(item.price, offer),
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }
+}
+
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 exports.getMeals = async (req, res) => {
   const {
@@ -73,9 +103,10 @@ exports.getMeals = async (req, res) => {
   const query = {}
 
   if (search) {
+    const safeSearch = escapeRegex(search)
     query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
+      { name: { $regex: safeSearch, $options: 'i' } },
+      { description: { $regex: safeSearch, $options: 'i' } },
     ]
   }
 
@@ -92,12 +123,44 @@ exports.getMeals = async (req, res) => {
     if (maxPrice !== undefined && maxPrice !== '') query.price.$lte = Number(maxPrice)
   }
 
-  const meals = await MealItem.find(query).sort({ createdAt: -1 })
+  const meals = await MealItem.aggregate([
+    { $match: query },
+    { $sort: { createdAt: -1 } },
+    {
+      $addFields: {
+        reviewCount: { $size: { $ifNull: ['$reviews', []] } },
+        averageRating: {
+          $cond: [
+            { $eq: [{ $size: { $ifNull: ['$reviews', []] } }, 0] },
+            0,
+            { $avg: '$reviews.rating' }
+          ]
+        }
+      }
+    },
+    {
+      $project: {
+        name: 1,
+        category: 1,
+        price: 1,
+        quantity: 1,
+        calories: 1,
+        description: 1,
+        imageUrl: 1,
+        isAvailable: 1,
+        offer: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        reviewCount: 1,
+        averageRating: 1,
+      },
+    },
+  ])
 
   return res.json({
     success: true,
     data: {
-      meals: meals.map(toMealItem),
+      meals: meals.map(toMealItemFromAggregate),
     },
   })
 }
