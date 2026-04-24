@@ -1,14 +1,13 @@
 ﻿import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import { Sparkles, Mail, Lock, User, ArrowRight, Loader2, BookOpen } from 'lucide-react';
+import { Sparkles, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'student',
   });
   
   const [errorLocal, setErrorLocal] = useState('');
@@ -16,7 +15,7 @@ const RegisterPage = () => {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -44,7 +43,7 @@ const RegisterPage = () => {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <Link to="/" className="flex items-center justify-center gap-2 mb-8 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
             <Sparkles className="text-white w-5 h-5" />
           </div>
           <span className="text-2xl font-extrabold text-slate-800 tracking-tight">Campus<span className="text-orange-500">Bites</span></span>
@@ -137,27 +136,6 @@ const RegisterPage = () => {
               <p className="mt-2 text-xs text-slate-500">
                 Must be at least 8 characters, and contain at least 1 uppercase letter and 1 number.
               </p>
-            </div>
-
-             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-slate-700">
-                Are you a student or admin?
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <BookOpen className="h-5 w-5 text-slate-400" />
-                </div>
-                 <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="focus:ring-orange-400 focus:border-orange-400 block w-full pl-10 sm:text-sm border-slate-300 rounded-xl bg-slate-50 py-3 transition-colors hover:bg-white appearance-none"
-                >
-                  <option value="student">Student</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
             </div>
 
             <div>

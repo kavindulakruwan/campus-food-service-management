@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
 import { useEffect, useRef, useState } from 'react'
 
-const links = [
+const studentLinks = [
   { label: 'Dashboard', path: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { label: 'Profile', path: '/profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   { label: 'Meals', path: '/meals', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
@@ -17,6 +17,13 @@ const links = [
   { label: 'Orders', path: '/orders', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
   { label: 'Payments', path: '/payments', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
   { label: 'Recommendations', path: '/recommendations', icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z' },
+]
+
+const adminLinks = [
+  { label: 'Dashboard', path: '/admin', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { label: 'Users', path: '/admin/users', icon: 'M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m8-5a4 4 0 11-8 0 4 4 0 018 0zM9 7a4 4 0 11-8 0 4 4 0 018 0z' },
+  { label: 'Meals', path: '/admin/meal-management', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { label: 'Payments', path: '/admin/payments', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
   { label: 'Settings', path: '/admin/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
@@ -38,10 +45,7 @@ const DashboardLayout = () => {
     localStorage.setItem('campus-theme', theme)
   }, [theme])
 
-  const visibleLinks = links.filter((link) => {
-    if (isAdmin) return true
-    return link.path !== '/dashboard' && link.path !== '/admin'
-  })
+  const visibleLinks = isAdmin ? adminLinks : studentLinks
   const [isSidebarVisible, setIsSidebarVisible] = useState(true)
   const activityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -159,7 +163,7 @@ const DashboardLayout = () => {
         <div className="border-t border-slate-100 p-4 bg-white">
           <button
             type="button"
-            onClick={() => navigate('/admin/settings')}
+            onClick={() => navigate(isAdmin ? '/admin/settings' : '/profile')}
             className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-[#Fdfbf7] p-3 text-left shadow-sm transition-colors hover:border-orange-200 hover:bg-orange-50 cursor-pointer"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 font-extrabold text-orange-600">
@@ -169,7 +173,7 @@ const DashboardLayout = () => {
             </div>
             <div className="flex-1 truncate">
               <p className="truncate text-sm font-bold text-slate-700">{user?.name}</p>
-              <p className="truncate text-xs font-semibold text-slate-400 capitalize">Settings</p>
+              <p className="truncate text-xs font-semibold text-slate-400 capitalize">{isAdmin ? 'Admin Settings' : 'Profile'}</p>
             </div>
             <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-orange-600">
               Open

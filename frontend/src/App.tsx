@@ -42,27 +42,174 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/meals" element={<MealsPage />} />
-            <Route path="/meals/:mealId" element={<MealDetailPage />} />
-            <Route path="/meal-plans" element={<MealPlannerPage />} />
-            <Route path="/community-chat" element={<CommunityChatPage />} />
-            <Route path="/meal-management" element={<MealManagementPage />} />
-            <Route path="/favorites" element={<FavoritesPage />} />
-            <Route path="/pantry" element={<PantryPage />} />
-            <Route path="/alerts" element={<AlertsPage />} />
-            <Route path="/budget" element={<BudgetPage />} />
-            <Route path="/recipes" element={<RecipesPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/payments" element={<PaymentsPage />} />
-            <Route path="/payments/history" element={<PaymentsPage />} />
-            <Route path="/payments/pending" element={<PaymentsPage />} />
-            <Route path="/payments/paid" element={<PaymentsPage />} />
-            <Route path="/payments/refunded" element={<PaymentsPage />} />
-            <Route path="/payments/receipt/:id" element={<DigitalReceiptPage />} />
-            <Route path="/recommendations" element={<RecommendationsPage />} />
+            <Route
+              path="/dashboard"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <DashboardPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/profile"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <ProfilePage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/meals"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <MealsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/meals/:mealId"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <MealDetailPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/meal-plans"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <MealPlannerPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/community-chat"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <CommunityChatPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/meal-management"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <MealManagementPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/favorites"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <FavoritesPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/pantry"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <PantryPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/alerts"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <AlertsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/budget"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <BudgetPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/recipes"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <RecipesPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/orders"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <OrdersPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/checkout"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <CheckoutPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/payments"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <PaymentsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/payments/history"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <PaymentsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/payments/pending"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <PaymentsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/payments/paid"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <PaymentsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/payments/refunded"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <PaymentsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/payments/receipt/:id"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <DigitalReceiptPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/recommendations"
+              element={(
+                <RoleRoute roles={['student']}>
+                  <RecommendationsPage />
+                </RoleRoute>
+              )}
+            />
             <Route
               path="admin"
               element={(
