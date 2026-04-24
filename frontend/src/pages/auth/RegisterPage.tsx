@@ -137,7 +137,6 @@ const RegisterPage = () => {
                 Must be at least 8 characters, and contain at least 1 uppercase letter and 1 number.
               </p>
             </div>
-
             <div>
                <button
                 type="submit"

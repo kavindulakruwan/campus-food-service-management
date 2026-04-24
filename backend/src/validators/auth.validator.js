@@ -7,11 +7,11 @@ const registerSchema = z.object({
               .min(8, 'Min 8 characters')
               .regex(/[A-Z]/, 'Must contain uppercase')
               .regex(/[0-9]/,  'Must contain number'),
-}).strict()
+})
 
 const loginSchema = z.object({
   email:    z.string().email(),
   password: z.string().min(1, 'Password required'),
-}).strict()
+})
 
 module.exports = { registerSchema, loginSchema }
