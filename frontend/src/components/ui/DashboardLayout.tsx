@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const links = [
   { label: 'Dashboard', path: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -16,7 +16,7 @@ const links = [
   { label: 'Orders', path: '/orders', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
   { label: 'Payments', path: '/payments', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
   { label: 'Recommendations', path: '/recommendations', icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z' },
-  { label: 'Admin', path: '/admin', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  { label: 'Settings', path: '/admin/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
 const DashboardLayout = () => {
@@ -41,6 +41,39 @@ const DashboardLayout = () => {
     if (isAdmin) return true
     return link.path !== '/dashboard' && link.path !== '/admin'
   })
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true)
+  const activityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const resetActivityTimeout = () => {
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current)
+    }
+    activityTimeoutRef.current = setTimeout(() => {
+      setIsSidebarVisible(false)
+    }, 15000)
+  }
+
+  useEffect(() => {
+    // Start timeout on initial load or path change
+    resetActivityTimeout()
+
+    const handleUserActivity = () => {
+      resetActivityTimeout()
+    }
+
+    window.addEventListener('mousemove', handleUserActivity)
+    window.addEventListener('keydown', handleUserActivity)
+    window.addEventListener('click', handleUserActivity)
+    window.addEventListener('scroll', handleUserActivity)
+
+    return () => {
+      if (activityTimeoutRef.current) clearTimeout(activityTimeoutRef.current)
+      window.removeEventListener('mousemove', handleUserActivity)
+      window.removeEventListener('keydown', handleUserActivity)
+      window.removeEventListener('click', handleUserActivity)
+      window.removeEventListener('scroll', handleUserActivity)
+    }
+  }, [location.pathname])
 
   const handleLogout = async () => {
     await logout()
@@ -49,6 +82,7 @@ const DashboardLayout = () => {
 
   const currentLink = visibleLinks.find((l) => location.pathname.startsWith(l.path))
   const pageTitle = currentLink ? currentLink.label : 'Application'
+  const pagePath = location.pathname.split('/').filter(Boolean).join(' / ') || 'dashboard'
 
   return (
     <div className="flex h-screen w-full bg-[#f8fafc] font-sans antialiased text-slate-900">
@@ -60,14 +94,25 @@ const DashboardLayout = () => {
         />
       )}
 
+      {/* Invisible trigger area for desktop right on the left edge - Made wider (128px) so it's easier to trigger */}
+      {!isSidebarVisible && (
+        <div 
+          className="fixed inset-y-0 left-0 w-16 z-60 hidden lg:block bg-transparent"
+          onMouseEnter={() => {
+            setIsSidebarVisible(true)
+            resetActivityTimeout()
+          }}
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform duration-300 shadow-[0_0_0_1px_rgba(15,23,42,0.02)] ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${isSidebarVisible ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
       >
-        <div className="flex h-16 flex-shrink-0 items-center gap-3 px-6 border-b border-slate-100">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-rose-400 flex items-center justify-center shadow-md shadow-orange-300/30">
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-100 px-6">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-400 to-rose-400 flex items-center justify-center shadow-md shadow-orange-300/30">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
                <line x1="6" x2="18" y1="17" y2="17"/>
@@ -77,16 +122,22 @@ const DashboardLayout = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
+          <div className="mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.28em] text-slate-400">
+            Navigation
+          </div>
           <nav className="flex flex-col gap-1.5">
             {visibleLinks.map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setIsSidebarVisible(false)
+                }}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                  `group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
                     isActive
-                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20 translate-x-1'
+                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20 translate-x-1 ring-1 ring-orange-400/20'
                       : 'text-slate-500 hover:bg-orange-50 hover:text-orange-600 hover:translate-x-1'
                   }`
                 }
@@ -105,34 +156,48 @@ const DashboardLayout = () => {
         </div>
 
         <div className="border-t border-slate-100 p-4 bg-white">
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-[#Fdfbf7] p-3 shadow-sm transition-colors hover:border-orange-200 cursor-pointer">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/settings')}
+            className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-[#Fdfbf7] p-3 text-left shadow-sm transition-colors hover:border-orange-200 hover:bg-orange-50 cursor-pointer"
+          >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 font-extrabold text-orange-600">
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
             </div>
             <div className="flex-1 truncate">
               <p className="truncate text-sm font-bold text-slate-700">{user?.name}</p>
-              <p className="truncate text-xs font-semibold text-slate-400 capitalize">{user?.role}</p>
+              <p className="truncate text-xs font-semibold text-slate-400 capitalize">Settings</p>
             </div>
-          </div>
+            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-orange-600">
+              Open
+            </span>
+          </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+      <div className={`flex min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300 ${isSidebarVisible ? 'lg:ml-72' : 'lg:ml-0'}`}>
         {/* Top Navbar */}
-        <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+          <div className="flex items-center gap-4 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="p-1 -ml-1 text-slate-500 lg:hidden hover:text-slate-700"
+              className="-ml-1 p-1 text-slate-500 hover:text-slate-700 lg:hidden"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h2 className="text-lg font-semibold tracking-tight text-slate-800 hidden sm:block">
-              {pageTitle}
-            </h2>
+            <div className="min-w-0">
+              <p className="hidden text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 sm:block">
+                CampusBites / {pagePath}
+              </p>
+              <h2 className="truncate text-lg font-semibold tracking-tight text-slate-800">
+                {pageTitle}
+              </h2>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">

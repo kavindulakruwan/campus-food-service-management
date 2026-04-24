@@ -1,5 +1,24 @@
+const mongoose = require('mongoose');
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
+
+const buildInitiationPayload = (payment) => {
+  if (payment.method === 'PayPal') {
+    return {
+      success: true,
+      paymentId: payment._id,
+      amount: payment.amount,
+      approvalUrl: `http://localhost:5173/checkout?token=mock_txn_${payment._id}`,
+    };
+  }
+
+  return {
+    success: true,
+    paymentId: payment._id,
+    amount: payment.amount,
+    qrData: `campusfood:pay:${payment._id}:amt:${payment.amount}`,
+  };
+};
 
 // Simulate PayPal payment initialization
 exports.initiatePayment = async (req, res) => {
@@ -7,47 +26,52 @@ exports.initiatePayment = async (req, res) => {
     const { orderId, method } = req.body;
     const userId = req.user.id;
 
-    // We'd normally fetch the order to get the amount
-    let order = await Order.findById(orderId);
-    if (!order) {
-      // Create a mock order for testing if none exists
-      order = await Order.create({
-        user: userId,
-        items: [{ name: 'Test Meal', quantity: 1, price: 10 }],
-        totalAmount: 10,
-        status: 'Pending',
-        paymentStatus: 'Pending'
-      });
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'orderId is required' });
     }
 
-    const payment = await Payment.create({
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid orderId' });
+    }
+
+    if (!['PayPal', 'QRCode'].includes(method)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment method' });
+    }
+
+    // We'd normally fetch the order to get the amount
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    let payment = await Payment.findOne({
+      user: userId,
+      order: order._id,
+      status: 'Pending',
+    }).sort({ createdAt: -1 });
+
+    if (payment) {
+      if (payment.method !== method) {
+        payment.method = method;
+      }
+
+      if (payment.amount !== order.totalAmount) {
+        payment.amount = order.totalAmount;
+      }
+
+      await payment.save();
+      return res.status(200).json(buildInitiationPayload(payment));
+    }
+
+    payment = await Payment.create({
       user: userId,
       order: order._id,
       amount: order.totalAmount,
-      method: method || 'PayPal',
+      method,
       status: 'Pending',
     });
 
-    if (method === 'PayPal') {
-      // Mock PayPal approval link
-      const mockApprovalLink = `http://localhost:5173/checkout?token=mock_txn_${payment._id}`;
-      return res.status(200).json({
-        success: true,
-        paymentId: payment._id,
-        amount: payment.amount,
-        approvalUrl: mockApprovalLink
-      });
-    } else if (method === 'QRCode') {
-      // Mock QR payload
-      const qrData = `campusfood:pay:${payment._id}:amt:${order.totalAmount}`;
-      return res.status(200).json({
-        success: true,
-        paymentId: payment._id,
-        qrData
-      });
-    } else {
-      return res.status(400).json({ success: false, message: 'Invalid method' });
-    }
+    return res.status(200).json(buildInitiationPayload(payment));
   } catch (error) {
     console.error('Payment initiation error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -57,6 +81,14 @@ exports.initiatePayment = async (req, res) => {
 exports.verifyPayment = async (req, res) => {
   try {
     const { paymentId, success } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ success: false, message: 'paymentId is required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({ success: false, message: 'Invalid paymentId' });
+    }
     
     const payment = await Payment.findById(paymentId);
     if (!payment) {
@@ -91,6 +123,10 @@ exports.getPaymentHistory = async (req, res) => {
 
 exports.getPaymentReceipt = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment id' });
+    }
+
     const payment = await Payment.findById(req.params.id)
       .populate('user', 'name email')
       .populate('order', 'items totalAmount');
@@ -123,6 +159,10 @@ exports.getAllPayments = async (req, res) => {
 
 exports.refundPayment = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment id' });
+    }
+
     const payment = await Payment.findById(req.params.id);
     if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
 

@@ -1,6 +1,27 @@
 const Order = require('../models/Order');
 const MealItem = require('../models/MealItem');
 
+const fallbackItems = [
+  { name: 'Spicy Chicken Sandwich', quantity: 1, price: 8.5 },
+  { name: 'Curly Fries', quantity: 1, price: 3.5 }
+];
+
+const normalizeItems = (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return fallbackItems;
+  }
+
+  return items
+    .map((item) => ({
+      name: String(item?.name || '').trim(),
+      quantity: Number(item?.quantity || 0),
+      price: Number(item?.price || 0),
+    }))
+    .filter((item) => item.name && item.quantity > 0 && item.price >= 0);
+};
+
+const calculateTotal = (items) => items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+
 // User handlers
 exports.createOrder = async (req, res) => {
   try {
@@ -54,16 +75,20 @@ exports.createOrder = async (req, res) => {
     }
 
     const totalAmount = Number(req.body?.totalAmount);
-    const safeTotalAmount = Number.isFinite(totalAmount) && totalAmount > 0
+    const finalTotal = Number.isFinite(totalAmount) && totalAmount > 0
       ? totalAmount
-      : items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      : calculateTotal(items);
+    const paymentMethod = ['Cash', 'PayPal', 'QRCode'].includes(req.body.paymentMethod)
+      ? req.body.paymentMethod
+      : 'Cash';
 
     const order = await Order.create({
       user: req.user.id,
       items,
-      totalAmount: safeTotalAmount,
+      totalAmount: finalTotal,
       status: 'Pending',
-      paymentStatus: 'Pending'
+      paymentStatus: 'Pending',
+      paymentMethod,
     });
 
     res.status(201).json({ success: true, data: order });

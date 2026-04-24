@@ -7,13 +7,18 @@ export interface OrderItemInput {
   price: number;
 }
 
-export interface CreateOrderPayload {
-  items?: OrderItemInput[];
+export type OrderItemPayload = OrderItemInput;
+
+export interface CreateOrderRequest {
+  items?: OrderItemPayload[];
   totalAmount?: number;
+  paymentMethod?: 'Cash' | 'PayPal' | 'QRCode';
 }
 
+export type CreateOrderPayload = CreateOrderRequest;
+
 export const orderApi = {
-  createOrder: async (payload: CreateOrderPayload = {}) => {
+  createOrder: async (payload: CreateOrderRequest = {}) => {
     const response = await axiosClient.post('/orders', payload);
     return response.data;
   },
