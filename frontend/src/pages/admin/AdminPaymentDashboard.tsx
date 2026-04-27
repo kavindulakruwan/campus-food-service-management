@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { paymentApi } from '../../api/payment.api';
+import { formatCurrency } from '../../utils/budgetTracking';
 import {
   DollarSign,
   CheckCircle2,
@@ -114,7 +115,7 @@ const AdminPaymentDashboard: React.FC = () => {
   const stats = [
     {
       label: 'Total Revenue',
-      value: `$${totalRevenue.toFixed(2)}`,
+      value: `${formatCurrency(totalRevenue)}`,
       icon: DollarSign,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
@@ -258,7 +259,7 @@ const AdminPaymentDashboard: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900">
-                      ${payment.amount.toFixed(2)}
+                      {formatCurrency(Number(payment.amount || 0))}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.text}`}>
@@ -312,7 +313,7 @@ const AdminPaymentDashboard: React.FC = () => {
                       <p className="text-xs text-slate-400">{payment.user?.email}</p>
                     </div>
                   </div>
-                  <p className="text-lg font-bold text-slate-900">${payment.amount.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-slate-900">{formatCurrency(Number(payment.amount || 0))}</p>
                 </div>
 
                 {/* Middle */}

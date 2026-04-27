@@ -5,6 +5,7 @@ export const orderApi = {
     api.post('/orders', payload),
   getMyOrders: () => api.get('/orders/my-orders'),
   getOrderById: (id: string) => api.get(`/orders/${id}`),
+  confirmOrder: (id: string) => api.patch(`/orders/${id}/confirm`),
   cancelOrder: (id: string) => api.patch(`/orders/${id}/cancel`),
   getQRCode: (id: string) => api.get(`/orders/${id}/qr-code`),
   getAllOrders: () => api.get('/orders'),

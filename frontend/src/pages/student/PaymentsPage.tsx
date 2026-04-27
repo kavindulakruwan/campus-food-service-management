@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { paymentApi } from '../../api/payment.api';
 import { orderApi } from '../../api/order.api';
+import { formatCurrency } from '../../utils/budgetTracking';
 
 interface OrderItem {
   name: string;
@@ -461,7 +462,7 @@ const PaymentsPage: React.FC = () => {
           </article>
           <article className="rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm transition hover:bg-white/15">
             <p className="text-xs uppercase tracking-wide text-orange-100/90">Total Paid</p>
-            <p className="mt-1 text-2xl font-black">${totalPaidAmount.toFixed(2)}</p>
+            <p className="mt-1 text-2xl font-black">{formatCurrency(totalPaidAmount)}</p>
           </article>
         </div>
       </section>
@@ -517,7 +518,7 @@ const PaymentsPage: React.FC = () => {
               >
                 {selectablePendingOrders.map((order) => (
                   <option key={order._id} value={order._id}>
-                    {order.orderNumber || order._id} - ${Number(order.totalAmount || 0).toFixed(2)}
+                    {order.orderNumber || order._id} - {formatCurrency(Number(order.totalAmount || 0))}
                   </option>
                 ))}
               </select>
@@ -549,19 +550,19 @@ const PaymentsPage: React.FC = () => {
 
                   <div className="mt-3 space-y-2">
                     {selectedOrder.items?.map((item, index) => (
-                      <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm shadow-sm">
-                        <span className="text-slate-700">{item.name} x {item.quantity}</span>
-                        <span className="font-semibold text-slate-900">${(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
+                        <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm shadow-sm">
+                          <span className="text-slate-700">{item.name} x {item.quantity}</span>
+                          <span className="font-semibold text-slate-900">{formatCurrency(item.price * item.quantity)}</span>
+                        </div>
+                      ))}
                   </div>
 
-                  <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-600">Total</span>
-                      <span className="text-xl font-black text-orange-600">${Number(selectedOrder.totalAmount || 0).toFixed(2)}</span>
-                    </div>
-                  </div>
+                    <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-600">Total</span>
+                          <span className="text-xl font-black text-orange-600">{formatCurrency(Number(selectedOrder.totalAmount || 0))}</span>
+                        </div>
+                      </div>
                 </div>
               )}
             </div>
@@ -571,7 +572,7 @@ const PaymentsPage: React.FC = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Payment Options</p>
                 {selectedOrder && (
                   <span className="rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700">
-                    ${Number(selectedOrder.totalAmount || 0).toFixed(2)} due
+                    {formatCurrency(Number(selectedOrder.totalAmount || 0))} due
                   </span>
                 )}
               </div>
@@ -638,7 +639,7 @@ const PaymentsPage: React.FC = () => {
                     alt="Payment QR code"
                     className="mx-auto h-40 w-40 rounded-lg border border-slate-200"
                   />
-                  <p className="text-center text-xs text-slate-500">Amount: ${initiatedPayment.amount.toFixed(2)}</p>
+                  <p className="text-center text-xs text-slate-500">Amount: {formatCurrency(Number(initiatedPayment.amount || 0))}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -663,12 +664,12 @@ const PaymentsPage: React.FC = () => {
               {initiatedPayment && selectedMethod === 'PayPal' && (
                 <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <p className="mb-3 text-xs font-semibold text-slate-500">Complete PayPal payment</p>
-                  <PayPalScriptProvider options={{ clientId: 'test', currency: 'USD', intent: 'capture' }}>
+                  <PayPalScriptProvider options={{ clientId: 'test', currency: 'LKR', intent: 'capture' }}>
                     <PayPalButtons
                       createOrder={(_data, actions) => {
                         return actions.order.create({
                           intent: 'CAPTURE',
-                          purchase_units: [{ amount: { currency_code: 'USD', value: initiatedPayment.amount.toFixed(2) } }],
+                          purchase_units: [{ amount: { currency_code: 'LKR', value: Number(initiatedPayment.amount || 0).toFixed(2) } }],
                         });
                       }}
                       onApprove={async (_data, actions) => {
@@ -775,7 +776,7 @@ const PaymentsPage: React.FC = () => {
                             {payment.method}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-900">${Number(payment.amount || 0).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(Number(payment.amount || 0))}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.bg} ${status.text}`}>
                             {status.icon}
