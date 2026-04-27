@@ -81,7 +81,12 @@ export const getPeriodDates = (period: BudgetPeriod, baseDate?: Date) => {
 }
 
 export const formatCurrency = (value: number) => {
-  return `$${Math.abs(value).toFixed(2)}`
+  return new Intl.NumberFormat('en-LK', {
+    style: 'currency',
+    currency: 'LKR',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  }).format(Math.abs(value))
 }
 
 export const formatDate = (date: Date | string) => {

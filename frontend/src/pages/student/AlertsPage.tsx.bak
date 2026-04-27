@@ -26,58 +26,36 @@ const AlertsPage = () => {
   const [hiddenPopupIds, setHiddenPopupIds] = useState<string[]>([])
   const [status, setStatus] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<'all' | AlertPriority>('all')
-  const [refreshTick, setRefreshTick] = useState(0)
 
   const role = user?.role === 'admin' ? 'admin' : 'student'
   const userId = user?.id || 'guest-user'
   const userName = user?.name || 'Student'
 
-  const loadAlerts = () => {
-    const loadedNotices = alertsStore.getPublishedNoticesForRole(role)
-    const loadedNotifications = alertsStore.getNotificationsForRole(role)
-
-    setNotices(loadedNotices)
-    setNotifications(loadedNotifications)
-  }
-
   useEffect(() => {
-    loadAlerts()
-
-    const handleExternalUpdate = (event: StorageEvent | Event) => {
-      // Always reload when we detect an update
-      if (event instanceof StorageEvent) {
-        if (event.key === alertsStore.getStorageKey()) {
-          loadAlerts()
-        }
-      } else {
-        // alerts-updated event from alertsStore
-        loadAlerts()
-      }
+    const load = () => {
+      setNotices(alertsStore.getPublishedNoticesForRole(role))
+      setNotifications(alertsStore.getNotificationsForRole(role))
     }
 
-    const handleVisibilityChange = () => {
-      // Refresh when user comes back to the tab
-      if (!document.hidden) {
-        loadAlerts()
+    load()
+
+    const handleExternalUpdate = (event: StorageEvent | Event) => {
+      if (event instanceof StorageEvent) {
+        if (event.key === alertsStore.getStorageKey()) {
+          load()
+        }
+      } else {
+        load()
       }
     }
 
     window.addEventListener('storage', handleExternalUpdate)
     window.addEventListener('alerts-updated', handleExternalUpdate)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Poll for updates every 1 second to ensure real-time sync
-    const pollInterval = setInterval(() => {
-      loadAlerts()
-    }, 1000)
-
     return () => {
       window.removeEventListener('storage', handleExternalUpdate)
       window.removeEventListener('alerts-updated', handleExternalUpdate)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      clearInterval(pollInterval)
     }
-  }, [role, refreshTick])
+  }, [role])
 
   const unreadNotifications = useMemo(
     () => notifications.filter((notification) => !notification.readByUserIds.includes(userId)),
@@ -105,22 +83,19 @@ const AlertsPage = () => {
     })
 
     setCommentDrafts((previous) => ({ ...previous, [noticeId]: '' }))
-    loadAlerts()
-    setRefreshTick((prev) => prev + 1)
+    setNotices(alertsStore.getPublishedNoticesForRole(role))
     setStatus('Comment posted.')
   }
 
   const markAsRead = (notificationId: string) => {
     alertsStore.markNotificationRead(notificationId, userId)
-    loadAlerts()
-    setRefreshTick((prev) => prev + 1)
+    setNotifications(alertsStore.getNotificationsForRole(role))
   }
 
   const markAllAsRead = () => {
     alertsStore.markAllNotificationsRead(userId, role)
+    setNotifications(alertsStore.getNotificationsForRole(role))
     setHiddenPopupIds([])
-    loadAlerts()
-    setRefreshTick((prev) => prev + 1)
     setStatus('All notifications marked as read.')
   }
 

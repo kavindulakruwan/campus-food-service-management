@@ -56,7 +56,7 @@ const DashboardLayout = () => {
     localStorage.setItem('campus-theme', theme)
   }, [theme])
 
-  // Load notifications with polling for real-time sync
+  // Load notifications
   useEffect(() => {
     const loadNotifications = () => {
       const role = isAdmin ? 'admin' : 'student'
@@ -76,27 +76,12 @@ const DashboardLayout = () => {
       }
     }
 
-    const handleVisibilityChange = () => {
-      // Refresh when user comes back to the tab
-      if (!document.hidden) {
-        loadNotifications()
-      }
-    }
-
     window.addEventListener('storage', handleExternalUpdate)
     window.addEventListener('alerts-updated', handleExternalUpdate)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Poll for updates every 1 second to ensure real-time sync
-    const pollInterval = setInterval(() => {
-      loadNotifications()
-    }, 1000)
 
     return () => {
       window.removeEventListener('storage', handleExternalUpdate)
       window.removeEventListener('alerts-updated', handleExternalUpdate)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      clearInterval(pollInterval)
     }
   }, [isAdmin, refreshTick])
 

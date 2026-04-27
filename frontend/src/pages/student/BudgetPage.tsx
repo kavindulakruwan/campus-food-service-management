@@ -32,27 +32,52 @@ const BudgetPage = () => {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
+  const loadBudgetData = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const [ordersResponse, mealsResponse] = await Promise.all([
+        orderApi.getMyOrders(),
+        getMeals({ search: '', category: 'all', availability: 'available' }),
+      ])
+
+      setOrders(Array.isArray(ordersResponse.data) ? ordersResponse.data : [])
+      setMeals(mealsResponse.data.data.meals || [])
+    } catch (fetchError: any) {
+      setError(fetchError?.response?.data?.message || 'Failed to load budget data.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      setError('')
+    void loadBudgetData()
 
-      try {
-        const [ordersResponse, mealsResponse] = await Promise.all([
-          orderApi.getMyOrders(),
-          getMeals({ search: '', category: 'all', availability: 'available' }),
-        ])
+    const handleBudgetUpdate = () => {
+      void loadBudgetData()
+    }
 
-        setOrders(Array.isArray(ordersResponse.data) ? ordersResponse.data : [])
-        setMeals(mealsResponse.data.data.meals || [])
-      } catch (fetchError: any) {
-        setError(fetchError?.response?.data?.message || 'Failed to load budget data.')
-      } finally {
-        setLoading(false)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void loadBudgetData()
       }
     }
 
-    void loadData()
+    window.addEventListener('campus-bites-budget-updated', handleBudgetUpdate)
+    window.addEventListener('storage', handleBudgetUpdate)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    const pollInterval = setInterval(() => {
+      void loadBudgetData()
+    }, 15000)
+
+    return () => {
+      window.removeEventListener('campus-bites-budget-updated', handleBudgetUpdate)
+      window.removeEventListener('storage', handleBudgetUpdate)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(pollInterval)
+    }
   }, [])
 
   const analytics = useMemo(() => calculateBudgetAnalytics(settings, orders), [settings, orders])
@@ -195,7 +220,7 @@ const BudgetPage = () => {
         <p className="text-xs uppercase tracking-[0.3em] text-indigo-100/80">Budget Management</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Spending control center</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-100/90 sm:text-base">
-          Set spending limits, track expenses, and get smart recommendations to stay within budget.
+          Set your budget in LKR, track order spending, and get smart recommendations to stay within budget.
         </p>
       </header>
 
@@ -203,11 +228,11 @@ const BudgetPage = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Budget Limit</p>
           <p className="mt-2 text-2xl font-bold text-indigo-600">{formatCurrency(analytics.totalBudget)}</p>
-          <p className="mt-1 text-xs text-slate-500">{settings.period} budget</p>
+          <p className="mt-1 text-xs text-slate-500">{settings.period} budget in LKR</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Total Spent</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Spent from Orders</p>
           <p
             className={`mt-2 text-2xl font-bold ${analytics.totalSpent > analytics.totalBudget ? 'text-rose-600' : 'text-slate-900'}`}
           >
@@ -217,7 +242,7 @@ const BudgetPage = () => {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Remaining</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Remaining to Spend</p>
           <p
             className={`mt-2 text-2xl font-bold ${analytics.remaining < 0 ? 'text-rose-600' : analytics.remaining < analytics.totalBudget * 0.2 ? 'text-amber-600' : 'text-emerald-600'}`}
           >
@@ -325,7 +350,7 @@ const BudgetPage = () => {
             <div>
               <label className="block text-sm font-semibold text-slate-700">Budget Amount</label>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-slate-500">$</span>
+                <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">LKR</span>
                 <input
                   type="number"
                   min={1}
@@ -361,7 +386,7 @@ const BudgetPage = () => {
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 font-semibold text-white hover:bg-indigo-700"
           >
             <Save className="h-4 w-4" />
-            Save Settings
+            Save Budget
           </button>
         </div>
       </div>
