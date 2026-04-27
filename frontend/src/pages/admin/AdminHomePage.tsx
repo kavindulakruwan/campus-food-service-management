@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getAdminDashboard } from '../../api/admin.api'
 
 interface RecentUser {
@@ -47,10 +48,32 @@ const AdminHomePage = () => {
 
   return (
     <section className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-widest text-orange-600">Admin Space</p>
-        <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-        <p className="text-slate-600">Only admin users can open this route and query admin APIs.</p>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-widest text-orange-600">Admin Space</p>
+          <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-600">Only admin users can open this route and query admin APIs.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to="/admin/users"
+            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+          >
+            Manage Users →
+          </Link>
+          <Link
+            to="/admin/meal-management"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+          >
+            Meal Management →
+          </Link>
+          <Link 
+            to="/admin/payments" 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+          >
+            Manage Payments & Refunds →
+          </Link>
+        </div>
       </header>
 
       {loading && <p className="text-slate-600">Loading admin metrics...</p>}
@@ -76,6 +99,24 @@ const AdminHomePage = () => {
               <p className="text-xs uppercase tracking-widest text-slate-500">Admins</p>
               <p className="mt-2 text-3xl font-bold text-slate-900">{stats.admins}</p>
             </article>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-orange-600">Meal Management</p>
+                <h2 className="text-lg font-semibold text-slate-900">Admin meal control panel</h2>
+                <p className="text-sm text-slate-600">
+                  Review meal analytics, manage meal plans, and keep the campus menu under control.
+                </p>
+              </div>
+              <Link
+                to="/admin/meal-management"
+                className="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700"
+              >
+                Open Meal Management
+              </Link>
+            </div>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4">

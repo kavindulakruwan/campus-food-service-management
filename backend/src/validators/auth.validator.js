@@ -7,7 +7,6 @@ const registerSchema = z.object({
               .min(8, 'Min 8 characters')
               .regex(/[A-Z]/, 'Must contain uppercase')
               .regex(/[0-9]/,  'Must contain number'),
-  role:     z.enum(['student', 'admin']).optional(),
 })
 
 const loginSchema = z.object({
