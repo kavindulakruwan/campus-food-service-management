@@ -2,6 +2,20 @@ const mongoose = require('mongoose');
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 
+/**
+ * Payment controller logic
+ *
+ * Main flow:
+ * 1) POST initiate -> create/reuse pending payment record for an order
+ * 2) POST verify   -> finalize payment status and sync order status
+ * 3) GET history   -> list user payment records
+ * 4) GET receipt   -> return single payment receipt detail
+ * 5) Admin GET     -> list all payments
+ * 6) Admin POST    -> refund completed payments
+ *
+ * HTTP methods currently used here are GET and POST only.
+ */
+
 const buildInitiationPayload = (payment) => {
   if (payment.method === 'PayPal') {
     return {
@@ -20,7 +34,8 @@ const buildInitiationPayload = (payment) => {
   };
 };
 
-// Simulate PayPal payment initialization
+// POST /payments/initiate
+// Creates or updates a pending payment for the selected order.
 exports.initiatePayment = async (req, res) => {
   try {
     const { orderId, method } = req.body;
@@ -78,6 +93,8 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
+// POST /payments/verify
+// Marks payment as Completed/Failed and mirrors status to the linked order.
 exports.verifyPayment = async (req, res) => {
   try {
     const { paymentId, success } = req.body;
@@ -110,6 +127,8 @@ exports.verifyPayment = async (req, res) => {
   }
 };
 
+// GET /payments/history
+// Returns current user's payment records ordered by newest first.
 exports.getPaymentHistory = async (req, res) => {
   try {
     const payments = await Payment.find({ user: req.user.id })
@@ -122,6 +141,8 @@ exports.getPaymentHistory = async (req, res) => {
   }
 };
 
+// GET /payments/:id/receipt
+// Returns full receipt data if caller is owner or admin.
 exports.getPaymentReceipt = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -147,6 +168,7 @@ exports.getPaymentReceipt = async (req, res) => {
 };
 
 // Admin handlers
+// GET /payments
 exports.getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find()
@@ -158,6 +180,7 @@ exports.getAllPayments = async (req, res) => {
   }
 };
 
+// POST /payments/:id/refund
 exports.refundPayment = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {

@@ -1,4 +1,19 @@
 const express = require('express');
+
+/**
+ * Payment routes
+ *
+ * Methods in use:
+ * - POST /initiate
+ * - POST /verify
+ * - GET  /history
+ * - GET  /:id/receipt
+ * - GET  /              (admin)
+ * - POST /:id/refund    (admin)
+ *
+ * Note: PUT is intentionally not used in current payment flow.
+ */
+
 const {
   initiatePayment,
   verifyPayment,
