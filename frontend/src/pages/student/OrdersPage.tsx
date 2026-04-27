@@ -59,7 +59,8 @@ const OrdersPage = () => {
     const loadOrders = async () => {
       try {
         const response = await orderApi.getMyOrders()
-        setOrders(response.data || [])
+        const ordersData = (response as any).data?.data ?? (response as any).data ?? []
+        setOrders(Array.isArray(ordersData) ? ordersData : [])
       } catch (fetchError) {
         console.error(fetchError)
         setError('Failed to load your order history.')
@@ -80,7 +81,8 @@ const OrdersPage = () => {
           category,
           availability: 'all',
         })
-        setMeals(response.data.data.meals || [])
+        const mealsData = response.data?.data?.meals ?? response.data?.data ?? response.data ?? []
+        setMeals(Array.isArray(mealsData) ? mealsData : [])
       } catch (fetchError) {
         console.error(fetchError)
         setError('Unable to load meals right now.')
@@ -151,7 +153,7 @@ const OrdersPage = () => {
       }
 
       const response = await orderApi.createOrder(request)
-      const createdOrder = response.data?.data || response.data
+      const createdOrder = (response as any).data?.data ?? (response as any).data
       const createdOrderId = createdOrder?._id || createdOrder?.id
 
       setCart([])
