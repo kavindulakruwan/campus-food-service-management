@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, BarChart3, Lightbulb, Save, TrendingDown, TrendingUp, Zap } from 'lucide-react'
+import { AlertCircle, Save, Zap } from 'lucide-react'
 import { getMeals, type MealItem } from '../../api/meals.api'
 import { orderApi } from '../../api/order.api'
+import { paymentApi } from '../../api/payment.api'
 import {
   calculateBudgetAnalytics,
   calculatePeriodLabel,
@@ -37,13 +38,28 @@ const BudgetPage = () => {
     setError('')
 
     try {
-      const [ordersResponse, mealsResponse] = await Promise.all([
+      const [ordersResponse, mealsResponse, paymentsResponse] = await Promise.all([
         orderApi.getMyOrders(),
         getMeals({ search: '', category: 'all', availability: 'available' }),
+        paymentApi.getHistory(),
       ])
 
-      setOrders(Array.isArray(ordersResponse.data) ? ordersResponse.data : [])
-      setMeals(mealsResponse.data.data.meals || [])
+      const rawOrders = Array.isArray(ordersResponse.data) ? ordersResponse.data : []
+      const meals = mealsResponse.data.data.meals || []
+
+      // Map completed payments into synthetic order-like entries so budget analytics count them
+      const payments = Array.isArray(paymentsResponse) ? paymentsResponse : Array.isArray(paymentsResponse?.data) ? paymentsResponse.data : []
+      const paymentOrders = payments
+        .filter((p: any) => p.status === 'Completed' && Number(p.amount))
+        .map((p: any) => ({
+          _id: `payment-${p._id}`,
+          createdAt: p.createdAt,
+          totalAmount: Number(p.amount || 0),
+          items: [],
+        }))
+
+      setOrders([...rawOrders, ...paymentOrders])
+      setMeals(meals)
     } catch (fetchError: any) {
       setError(fetchError?.response?.data?.message || 'Failed to load budget data.')
     } finally {
@@ -82,6 +98,18 @@ const BudgetPage = () => {
 
   const analytics = useMemo(() => calculateBudgetAnalytics(settings, orders), [settings, orders])
 
+  // Projected spend for the configured period (daily/weekly/monthly)
+  const projectedPeriodSpend = useMemo(() => {
+    if (!analytics) return 0
+    if (settings.period === 'daily') return analytics.averageDailySpend
+    if (settings.period === 'weekly') return analytics.averageDailySpend * 7
+    return analytics.projectedMonthlySpend
+  }, [analytics, settings.period])
+
+  const expectedRemainingNextPeriod = useMemo(() => {
+    return Math.round((settings.amount - projectedPeriodSpend) * 100) / 100
+  }, [settings.amount, projectedPeriodSpend])
+
   const onSaveBudgetSettings = () => {
     if (tempSettings.amount <= 0) {
       setError('Budget amount must be greater than 0.')
@@ -110,100 +138,6 @@ const BudgetPage = () => {
       .slice(0, 6)
   }, [analytics, meals])
 
-  const costSavingSuggestions = useMemo(() => {
-    const suggestions: string[] = []
-
-    if (analytics.percentageUsed >= 90) {
-      suggestions.push('⚠️ You are at 90% of your budget. Consider reducing spending or increasing the budget limit.')
-    }
-
-    if (analytics.projectedMonthlySpend > settings.amount * 1.2) {
-      suggestions.push(
-        '📈 At current rate, you will exceed your budget by ~' +
-          formatCurrency(analytics.projectedMonthlySpend - settings.amount) +
-          ' this month.',
-      )
-    }
-
-    if (analytics.daysRemaining > 0 && analytics.remaining > 0) {
-      const dailyBudget = analytics.remaining / analytics.daysRemaining
-      suggestions.push(`💡 To stay within budget, limit daily spending to ${formatCurrency(dailyBudget)}.`)
-    }
-
-    if (analytics.percentageUsed > 100) {
-      suggestions.push(
-        '🚨 Budget exceeded by ' +
-          formatCurrency(Math.abs(analytics.remaining)) +
-          '. Increase budget or reduce spending.',
-      )
-    }
-
-    if (affordableMeals.length > 0) {
-      suggestions.push(
-        `✨ Found ${affordableMeals.length} affordable options within remaining budget for today.`,
-      )
-    }
-
-    return suggestions.length > 0 ? suggestions : ['👍 Your spending is on track. Keep it up!']
-  }, [analytics, settings, affordableMeals])
-
-  const spendingTrend = useMemo(() => {
-    if (analytics.spendingByDay.length < 2) return 'stable'
-    const recent = analytics.spendingByDay.slice(-7)
-    const older = analytics.spendingByDay.slice(0, Math.max(1, analytics.spendingByDay.length - 7))
-
-    const recentAvg = recent.reduce((sum, d) => sum + d.amount, 0) / recent.length
-    const olderAvg = older.reduce((sum, d) => sum + d.amount, 0) / older.length
-
-    if (recentAvg > olderAvg * 1.1) return 'increasing'
-    if (recentAvg < olderAvg * 0.9) return 'decreasing'
-    return 'stable'
-  }, [analytics])
-
-  const spendingTrendIcon =
-    spendingTrend === 'increasing' ? (
-      <TrendingUp className="h-4 w-4 text-rose-500" />
-    ) : spendingTrend === 'decreasing' ? (
-      <TrendingDown className="h-4 w-4 text-emerald-500" />
-    ) : (
-      <BarChart3 className="h-4 w-4 text-slate-400" />
-    )
-
-  const chartMaxValue = Math.max(
-    ...analytics.spendingByDay.map((d) => d.amount),
-    settings.amount / Math.max(1, analytics.daysInPeriod),
-  )
-
-  const renderSpendingChart = () => {
-    const barCount = Math.min(14, analytics.spendingByDay.length || 1)
-    const visibleSpending = analytics.spendingByDay.slice(-barCount)
-
-    return (
-      <div className="flex items-end justify-between gap-1" style={{ height: '120px' }}>
-        {visibleSpending.length === 0 ? (
-          <div className="w-full text-center text-xs text-slate-500">No spending data yet</div>
-        ) : (
-          visibleSpending.map((day) => (
-            <div
-              key={day.date}
-              className="group relative flex flex-1 flex-col items-center gap-1"
-              title={`${day.date}: ${formatCurrency(day.amount)}`}
-            >
-              <div
-                className="w-full rounded-t-lg bg-linear-to-t from-orange-500 to-orange-400 transition-all duration-200 hover:from-orange-600 hover:to-orange-500"
-                style={{
-                  height: `${Math.max(4, (day.amount / chartMaxValue) * 100)}%`,
-                }}
-              />
-              <span className="text-[10px] text-slate-500 opacity-0 transition-opacity group-hover:opacity-100">
-                {new Date(day.date).getDate()}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-    )
-  }
 
   if (loading) {
     return (
@@ -220,11 +154,16 @@ const BudgetPage = () => {
         <p className="text-xs uppercase tracking-[0.3em] text-indigo-100/80">Budget Management</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Spending control center</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-100/90 sm:text-base">
-          Set your budget in LKR, track order spending, and get smart recommendations to stay within budget.
+          Set your budget in LKR and track spending from orders and payments in real time.
         </p>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Projected Next Period</p>
+          <p className="mt-2 text-2xl font-bold text-indigo-600">{formatCurrency(projectedPeriodSpend)}</p>
+          <p className="mt-1 text-xs text-slate-500">Expected remaining: {formatCurrency(expectedRemainingNextPeriod)}</p>
+        </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Budget Limit</p>
           <p className="mt-2 text-2xl font-bold text-indigo-600">{formatCurrency(analytics.totalBudget)}</p>
@@ -254,10 +193,7 @@ const BudgetPage = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Daily Average</p>
           <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrency(analytics.averageDailySpend)}</p>
-          <div className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">
-            {spendingTrendIcon}
-            <span className="capitalize">{spendingTrend}</span>
-          </div>
+          <p className="mt-1 text-xs text-slate-500">Live update from your latest payments and orders</p>
         </div>
       </div>
 
@@ -282,7 +218,7 @@ const BudgetPage = () => {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-100">
               <div
-                className={`h-full transition-all ${
+                className={`h-full animate-pulse transition-all duration-700 ${
                   analytics.percentageUsed >= 100
                     ? 'bg-rose-500'
                     : analytics.percentageUsed >= 75
@@ -292,36 +228,6 @@ const BudgetPage = () => {
                 style={{ width: `${Math.min(100, analytics.percentageUsed)}%` }}
               />
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Spending Trend (Last 14 Days)</h2>
-            <div className="inline-flex items-center gap-2 text-sm font-semibold">
-              {spendingTrendIcon}
-              <span className="capitalize text-slate-700">{spendingTrend}</span>
-            </div>
-          </div>
-          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">{renderSpendingChart()}</div>
-          <div className="mt-3 text-xs text-slate-500">
-            Projected {settings.period} spending: {formatCurrency(analytics.projectedMonthlySpend)}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-amber-500" />
-            <h2 className="text-lg font-bold text-slate-900">Smart Recommendations</h2>
-          </div>
-          <div className="space-y-2">
-            {costSavingSuggestions.map((suggestion, idx) => (
-              <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                {suggestion}
-              </div>
-            ))}
           </div>
         </div>
       </div>

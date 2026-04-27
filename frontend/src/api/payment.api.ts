@@ -32,6 +32,12 @@ export const paymentApi = {
   // Update the payment status after the gateway or QR flow completes.
   verify: async (paymentId: string, success: boolean) => {
     const response = await axiosClient.post('/payments/verify', { paymentId, success });
+    // Notify budget listeners that spending may have changed
+    try {
+      window.dispatchEvent(new Event('campus-bites-budget-updated'))
+    } catch (e) {
+      // ignore in non-browser environments
+    }
     return response.data;
   },
 
@@ -56,6 +62,9 @@ export const paymentApi = {
   // Trigger a refund for a completed payment.
   refundPayment: async (id: string) => {
     const response = await axiosClient.post(`/payments/${id}/refund`);
+    try {
+      window.dispatchEvent(new Event('campus-bites-budget-updated'))
+    } catch (e) {}
     return response.data;
   },
 
