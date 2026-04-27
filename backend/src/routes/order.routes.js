@@ -1,12 +1,14 @@
 ﻿const express = require('express');
-const { getMyOrders, getAllOrders, createOrder, getOrderById, getOrderQRCode, cancelOrder, updateOrderStatus, deleteOrder } = require('../controllers/order.controller');
+const { getMyOrders, getAllOrders, createOrder, updateOrder, getOrderById, getOrderQRCode, cancelOrder, confirmOrder, updateOrderStatus, deleteOrder } = require('../controllers/order.controller');
 const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 router.use(authenticate);
 
 router.post('/', createOrder);
+router.patch('/:id', updateOrder);
 router.get('/my-orders', getMyOrders);
+router.patch('/:id/confirm', confirmOrder);
 router.get('/:id/qr-code', getOrderQRCode);
 router.patch('/:id/cancel', cancelOrder);
 router.get('/:id', getOrderById);

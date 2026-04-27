@@ -59,6 +59,23 @@ exports.initiatePayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    if (order.user.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (!['Pending', 'Processing'].includes(order.status)) {
+      return res.status(400).json({ success: false, message: 'Order is not eligible for payment' });
+    }
+
+    if (order.status === 'Pending') {
+      order.status = 'Processing';
+      await order.save();
+    }
+
+    if (order.paymentStatus === 'Paid') {
+      return res.status(400).json({ success: false, message: 'This order has already been paid' });
+    }
+
     let payment = await Payment.findOne({
       user: userId,
       order: order._id,
@@ -118,12 +135,68 @@ exports.verifyPayment = async (req, res) => {
 
     await Order.findByIdAndUpdate(payment.order, {
       paymentStatus: success ? 'Paid' : 'Failed',
-      status: success ? 'Completed' : 'Pending',
+      status: success ? 'Completed' : 'Processing',
     });
 
     res.status(200).json({ success: true, payment });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// POST /payments/:id/refund-request
+// Student creates a refund request with a reason; admin can review later.
+exports.requestRefund = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reason = String(req.body?.reason || '').trim();
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment id' });
+    }
+
+    if (reason.length < 5) {
+      return res.status(400).json({ success: false, message: 'Please provide a short reason for the refund request' });
+    }
+
+    const payment = await Payment.findById(id);
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    if (payment.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (payment.status === 'Refunded') {
+      return res.status(400).json({ success: false, message: 'Payment is already refunded' });
+    }
+
+    if (payment.status !== 'Completed') {
+      return res.status(400).json({ success: false, message: 'Only completed payments can request refunds' });
+    }
+
+    if (payment.refundRequest?.status === 'Pending') {
+      return res.status(400).json({ success: false, message: 'Refund request already submitted for this payment' });
+    }
+
+    payment.refundRequest = {
+      requested: true,
+      reason,
+      status: 'Pending',
+      requestedAt: new Date(),
+      reviewedAt: payment.refundRequest?.reviewedAt,
+    };
+
+    await payment.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Refund request submitted successfully',
+      data: payment,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
@@ -195,6 +268,13 @@ exports.refundPayment = async (req, res) => {
     }
 
     payment.status = 'Refunded';
+    payment.refundRequest = {
+      requested: true,
+      reason: payment.refundRequest?.reason || '',
+      status: 'Approved',
+      requestedAt: payment.refundRequest?.requestedAt || new Date(),
+      reviewedAt: new Date(),
+    };
     await payment.save();
 
     await Order.findByIdAndUpdate(payment.order, { paymentStatus: 'Refunded' });

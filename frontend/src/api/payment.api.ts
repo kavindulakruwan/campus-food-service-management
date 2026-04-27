@@ -17,6 +17,10 @@ export interface PaymentInitiateRequest {
   method: 'PayPal' | 'QRCode';
 }
 
+export interface RefundRequestPayload {
+  reason: string;
+}
+
 // Payment endpoints used by the student payment flow and admin tools.
 export const paymentApi = {
   // Create a payment session for the selected order and method.
@@ -52,6 +56,12 @@ export const paymentApi = {
   // Trigger a refund for a completed payment.
   refundPayment: async (id: string) => {
     const response = await axiosClient.post(`/payments/${id}/refund`);
+    return response.data;
+  },
+
+  // Student submits refund request with reason.
+  requestRefund: async (id: string, payload: RefundRequestPayload) => {
+    const response = await axiosClient.post(`/payments/${id}/refund-request`, payload);
     return response.data;
   }
 };

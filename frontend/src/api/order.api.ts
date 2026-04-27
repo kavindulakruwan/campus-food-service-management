@@ -20,6 +20,10 @@ export const orderApi = {
     const response = await axiosClient.post('/orders', payload);
     return response;
   },
+  updateOrder: async (id: string, payload: CreateOrderRequest) => {
+    const response = await axiosClient.patch(`/orders/${id}`, payload);
+    return response;
+  },
   getMyOrders: async () => {
     const response = await axiosClient.get('/orders/my-orders');
     return response;
@@ -30,6 +34,10 @@ export const orderApi = {
   },
   cancelOrder: async (id: string) => {
     const response = await axiosClient.patch(`/orders/${id}/cancel`);
+    return response;
+  },
+  confirmOrder: async (id: string) => {
+    const response = await axiosClient.patch(`/orders/${id}/confirm`);
     return response;
   },
   getQRCode: async (id: string) => {
