@@ -35,34 +35,40 @@ export interface CreatePantryItemInput {
   category: PantryCategory
   notes?: string
 }
-  // GET /pantry/:id/receipt
+
+// Frontend pantry API used by PantryPage and AdminPantryManagementPage.
 export const pantryApi = {
+  // PantryPage -> GET /pantry/my
   getMyItems: async () => {
     const response = await axiosClient.get('/pantry/my')
     return response.data
   },
-  // GET /pantry/:id/receipt
+
+  // PantryPage -> POST /pantry
   createItem: async (payload: CreatePantryItemInput) => {
     const response = await axiosClient.post('/pantry', payload)
     return response.data
   },
-  // GET /pantry/:id/receipt
 
+  // PantryPage -> PATCH /pantry/:id
   updateItem: async (id: string, payload: Partial<CreatePantryItemInput>) => {
     const response = await axiosClient.patch(`/pantry/${id}`, payload)
     return response.data
   },
 
+  // AdminPantryManagementPage -> GET /pantry/admin/items
   getAdminItems: async (params: { search?: string; status?: 'all' | 'pending' | 'approved'; stock?: 'all' | 'low'; page?: number; limit?: number }) => {
     const response = await axiosClient.get('/pantry/admin/items', { params })
     return response.data
   },
 
+  // AdminPantryManagementPage -> PATCH /pantry/admin/items/:id/approve
   approveAdminItem: async (id: string) => {
     const response = await axiosClient.patch(`/pantry/admin/items/${id}/approve`)
     return response.data
   },
 
+  // AdminPantryManagementPage -> DELETE /pantry/admin/items/:id
   deleteAdminItem: async (id: string) => {
     const response = await axiosClient.delete(`/pantry/admin/items/${id}`)
     return response.data
