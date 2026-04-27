@@ -1,4 +1,4 @@
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { loginUser, logoutUser, registerUser } from '../api/auth.api'
 import type { AuthResponse, AuthUser } from '../types/auth'
 
@@ -21,6 +21,7 @@ interface AuthContextValue {
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
+  updateUser: (user: AuthUser) => void
 }
 
 const ACCESS_TOKEN_KEY = 'accessToken'
@@ -94,6 +95,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const updateUser = useCallback((nextUser: AuthUser) => {
+    setUser(nextUser)
+    if (accessToken) {
+      saveSession(accessToken, nextUser)
+    }
+  }, [accessToken])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -103,8 +111,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       register,
       logout,
+      updateUser,
     }),
-    [user, accessToken, isLoading],
+    [user, accessToken, isLoading, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

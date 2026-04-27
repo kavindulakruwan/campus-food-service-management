@@ -1,165 +1,170 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentApi, type PaymentInitiateRequest } from '../../api/payment.api';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import { CreditCard, QrCode, Shield, ArrowLeft, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
 
 const CheckoutPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [method, setMethod] = useState<'PayPal' | 'QRCode'>('PayPal');
+  const requestedMethod = searchParams.get('method');
+  const orderId = searchParams.get('orderId') || undefined;
+  const [method, setMethod] = useState<'PayPal' | 'QRCode'>(() => (
+    requestedMethod === 'QRCode' ? 'QRCode' : 'PayPal'
+  ));
   const [loading, setLoading] = useState(false);
-  const [qrImage, setQrImage] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [autoStarted, setAutoStarted] = useState(false);
   const [paypalAmount, setPaypalAmount] = useState<string | null>(null);
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
-
   const navigate = useNavigate();
+  const isMethodLocked = requestedMethod === 'PayPal' || requestedMethod === 'QRCode';
 
-  const handlePayment = async () => {
-    setLoading(true);
-    setError('');
-    setQrImage(null);
-    setQrCode(null);
+  useEffect(() => {
+    if (requestedMethod === 'QRCode') setMethod('QRCode');
+    else if (requestedMethod === 'PayPal') setMethod('PayPal');
+  }, [requestedMethod]);
 
-    const request: PaymentInitiateRequest = {
-      method,
-      orderId: searchParams.get('orderId') || undefined
-    };
-
+  const handlePayment = async (selectedMethod?: 'PayPal' | 'QRCode') => {
+    const payMethod = selectedMethod ?? method;
+    if (!orderId) { setError('Order not found. Please place an order first.'); return; }
+    setLoading(true); setError(''); setQrCode(null); setPaypalAmount(null);
+    const request: PaymentInitiateRequest = { method: payMethod, orderId };
     try {
       const response = await paymentApi.initiate(request);
-      setCurrentPaymentId(response.paymentId);
-
-      if (method === 'PayPal') {
+      if (payMethod === 'PayPal') {
         setPaypalAmount(response.amount.toString());
-      } else if (method === 'QRCode') {
+        setCurrentPaymentId(response.paymentId);
+      } else if (payMethod === 'QRCode') {
         setQrCode(response.qrData);
-        setQrImage(response.qrImage || `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(response.qrData)}`);
+        setCurrentPaymentId(response.paymentId);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to initiate payment');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const verifyQR = async () => {
-    if (!currentPaymentId) {
-      setError('Unable to verify payment. Try again.');
-      return;
-    }
+  useEffect(() => {
+    if (requestedMethod === 'Cash') { setError('Cash payment is collected on delivery.'); return; }
+    if (!isMethodLocked || !orderId || autoStarted) return;
+    setAutoStarted(true);
+    handlePayment(method);
+  }, [autoStarted, isMethodLocked, method, orderId]);
 
+  const verifyQR = async () => {
+    if (!currentPaymentId) { setError('Unable to verify payment.'); return; }
     try {
       await paymentApi.verify(currentPaymentId, true);
       alert('QR payment completed successfully.');
-      navigate('/payments/history');
-    } catch (err) {
-      setError('Failed to verify QR payment.');
-    }
+      navigate('/payments');
+    } catch { setError('Failed to verify QR payment.'); }
   };
 
+  const resetFlow = () => { setPaypalAmount(null); setCurrentPaymentId(null); setQrCode(null); setError(''); };
+
+  // QR Active Flow
+  if (qrCode && !paypalAmount) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Active Payment Flow</h1>
+            <p className="text-slate-500 text-sm mt-1">Keep this window open until the transaction is finalized.</p>
+          </div>
+          <button onClick={resetFlow} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <RefreshCw className="w-4 h-4" /> Switch Method
+          </button>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="flex flex-col items-center gap-6">
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`} alt="QR" className="w-48 h-48 rounded-xl border border-slate-200" />
+            <p className="text-sm text-slate-400 text-center">Open your banking app or camera to scan and authorize payment.</p>
+            <div className="flex gap-3 w-full">
+              <button onClick={resetFlow} className="flex-1 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button onClick={verifyQR} className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold">Confirm Payment Received</button>
+            </div>
+          </div>
+        </div>
+        <div className="bg-orange-500 rounded-2xl p-4 flex items-center gap-3 text-white">
+          <Clock className="w-5 h-5 opacity-80" />
+          <p className="text-sm font-bold">Payment in progress — do not refresh.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // PayPal Active Flow
+  if (paypalAmount && currentPaymentId) {
+    return (
+      <div className="max-w-lg mx-auto space-y-6">
+        <button onClick={resetFlow} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 font-medium">
+          <ArrowLeft className="w-4 h-4" /> Back to payment methods
+        </button>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-orange-500 px-6 py-8 text-center text-white">
+            <p className="text-sm opacity-80">Amount Due</p>
+            <p className="text-4xl font-black mt-1">Rs. {Number(paypalAmount).toFixed(2)}</p>
+          </div>
+          <div className="p-6 space-y-6">
+            <PayPalScriptProvider options={{ clientId: 'test', currency: 'USD', intent: 'capture' }}>
+              <PayPalButtons
+                createOrder={(_data, actions) => actions.order.create({
+                  intent: 'CAPTURE',
+                  purchase_units: [{ amount: { currency_code: 'USD', value: Number(paypalAmount).toFixed(2) } }]
+                })}
+                onApprove={async (_data, actions) => {
+                  if (!actions.order) return;
+                  try {
+                    await actions.order.capture();
+                    await paymentApi.verify(currentPaymentId, true);
+                    alert('PayPal payment completed!');
+                    navigate('/payments');
+                  } catch { setError('Payment verification failed.'); }
+                }}
+              />
+            </PayPalScriptProvider>
+            <div className="flex items-center justify-center gap-2 text-slate-400">
+              <Shield className="w-4 h-4" />
+              <span className="text-xs">Secure 256-bit SSL encrypted transaction</span>
+            </div>
+            <button onClick={resetFlow} className="w-full text-center text-sm text-slate-500 hover:text-slate-800 font-medium">Cancel & Go Back</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: Method Selection
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="max-w-xl w-full bg-white rounded-3xl shadow-xl overflow-hidden">
-        <div className="px-6 py-8 border-b border-gray-100">
-          <h2 className="text-3xl font-bold text-gray-900 text-center">Checkout</h2>
-          <p className="text-gray-500 text-center text-sm mt-2">Secure payment for your campus food order.</p>
+    <div className="max-w-xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Make a Payment</h1>
+        <p className="text-slate-500 text-sm mt-1">Select your preferred method to complete your order payment.</p>
+      </div>
+      {error && <div className="p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+        <h2 className="text-lg font-bold text-slate-900">Choose Payment Method</h2>
+        <div className="grid grid-cols-2 gap-4">
+          {(['PayPal', 'QRCode'] as const).map(m => (
+            <button key={m} onClick={() => setMethod(m)}
+              className={`relative p-5 rounded-2xl border-2 text-left transition-all ${method === m ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-orange-300'}`}>
+              {method === m && <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center"><CheckCircle2 className="w-3.5 h-3.5 text-white" /></div>}
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${method === m ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                {m === 'PayPal' ? <CreditCard className="w-6 h-6" /> : <QrCode className="w-6 h-6" />}
+              </div>
+              <h3 className="font-bold text-slate-800">{m === 'PayPal' ? 'PayPal Express' : 'Campus QR Code'}</h3>
+              <p className="text-xs text-slate-400 mt-1">{m === 'PayPal' ? 'Fast, secure checkout via PayPal.' : 'Scan at any campus kiosk.'}</p>
+            </button>
+          ))}
         </div>
-
-        <div className="p-6 space-y-6">
-          {error && (
-            <div className="rounded-2xl bg-red-50 border border-red-100 p-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          {!qrImage && !paypalAmount ? (
-            <>
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">Choose payment method</label>
-                <div className="grid grid-cols-2 gap-4">
-                  {['PayPal', 'QRCode'].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => setMethod(option as 'PayPal' | 'QRCode')}
-                      className={`rounded-3xl border-2 px-4 py-4 text-sm font-semibold transition ${
-                        method === option ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={handlePayment}
-                disabled={loading}
-                className="w-full rounded-3xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {loading ? 'Preparing payment...' : `Pay with ${method}`}
-              </button>
-            </>
-          ) : qrImage ? (
-            <div className="space-y-6 text-center">
-              <div className="mx-auto w-64 h-64 rounded-3xl border border-gray-200 bg-gray-50 flex items-center justify-center p-4">
-                <img src={qrImage} alt="QR Code" className="max-h-full max-w-full" />
-              </div>
-              <div>
-                <p className="text-gray-900 font-semibold">Scan this QR code</p>
-                <p className="text-sm text-gray-500 mt-2">Use your mobile banking app or QR wallet to complete the payment.</p>
-              </div>
-              <button
-                onClick={verifyQR}
-                className="w-full rounded-3xl bg-green-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-green-200 transition hover:bg-green-700"
-              >
-                Confirm payment received
-              </button>
-              <button
-                onClick={() => { setQrImage(null); setQrCode(null); setCurrentPaymentId(null); }}
-                className="w-full rounded-3xl border border-gray-200 px-5 py-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-              >
-                Start over
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-6 animate-fade-in-up">
-              <div className="text-center">
-                <p className="text-gray-500 text-sm">Amount due</p>
-                <p className="text-4xl font-bold text-gray-900">${Number(paypalAmount).toFixed(2)}</p>
-              </div>
-              <PayPalScriptProvider options={{ clientId: 'test', currency: 'USD', intent: 'capture' }}>
-                <PayPalButtons
-                  createOrder={(_data, actions) =>
-                    actions.order.create({
-                      intent: 'CAPTURE',
-                      purchase_units: [{ amount: { currency_code: 'USD', value: Number(paypalAmount).toFixed(2) } }]
-                    })
-                  }
-                  onApprove={async (_data, actions) => {
-                    if (!actions.order) return;
-                    try {
-                      await actions.order.capture();
-                      if (currentPaymentId) {
-                        await paymentApi.verify(currentPaymentId, true);
-                      }
-                      alert('PayPal payment completed successfully');
-                      navigate('/payments/history');
-                    } catch (err) {
-                      setError('Payment verification failed.');
-                    }
-                  }}
-                />
-              </PayPalScriptProvider>
-              <button
-                onClick={() => { setPaypalAmount(null); setCurrentPaymentId(null); }}
-                className="w-full rounded-3xl border border-gray-200 px-5 py-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-              >
-                Cancel and choose another method
-              </button>
-            </div>
-          )}
-        </div>
+      </div>
+      <button onClick={() => handlePayment()} disabled={loading}
+        className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg disabled:opacity-70">
+        {loading ? 'Processing...' : `Pay via ${method === 'PayPal' ? 'PayPal' : 'QR Code'}`}
+      </button>
+      <div className="flex items-center justify-center gap-2 text-slate-400">
+        <Shield className="w-4 h-4" />
+        <span className="text-xs">Secure 256-bit SSL encrypted transaction</span>
       </div>
     </div>
   );

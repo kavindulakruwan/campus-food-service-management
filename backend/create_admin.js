@@ -5,13 +5,13 @@ const User = require('./src/models/User');
 mongoose.connect(process.env.MONGO_URI).then(async () => {
   try {
     // Check if admin already exists
-    let admin = await User.findOne({ email: 'admin@campus.edu' });
+    let admin = await User.findOne({ email: 'admin@example.com' });
     
     if (!admin) {
       console.log('Creating new admin account...');
       admin = await User.create({
         name: 'Campus Admin',
-        email: 'admin@campus.edu',
+        email: 'admin@example.com',
         password: 'password123', // Model will hash this before saving
         role: 'admin'
       });

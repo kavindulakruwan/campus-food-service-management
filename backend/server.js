@@ -1,4 +1,4 @@
-﻿require('dotenv').config()
+require('dotenv').config()
 require('express-async-errors')
 
 const express = require('express')
@@ -13,8 +13,10 @@ const authRoutes = require('./src/routes/auth.routes')
 const adminRoutes = require('./src/routes/admin.routes')
 const paymentRoutes = require('./src/routes/payment.routes')
 const orderRoutes = require('./src/routes/order.routes')
+const mealItemRoutes = require('./src/routes/mealItem.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
+const userRoutes = require('./src/routes/user.routes')
 const app = express()
 
 app.use(helmet())
@@ -49,6 +51,7 @@ const dbCheckMiddleware = (req, res, next) => {
 app.use('/api/auth', dbCheckMiddleware, authRoutes)
 app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
 app.use('/api/chat', dbCheckMiddleware, chatRoutes)
+app.use('/api/users', dbCheckMiddleware, userRoutes)
 
 
 app.use('/api/admin', (req, res, next) => {
@@ -80,6 +83,16 @@ app.use('/api/orders', (req, res, next) => {
   }
   return next()
 }, orderRoutes)
+
+app.use('/api/meals', (req, res, next) => {
+  if (!getMongoStatus().connected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable.',
+    })
+  }
+  return next()
+}, mealItemRoutes)
 
 // Global error handler
 app.use((err, _req, res, _next) => {
