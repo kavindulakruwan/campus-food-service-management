@@ -1,10 +1,8 @@
-﻿require('dotenv').config()
+require('dotenv').config()
 require('express-async-errors')
 
 const express = require('express')
 const net = require('net')
-const fs = require('fs')
-const path = require('path')
 const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
@@ -15,20 +13,16 @@ const authRoutes = require('./src/routes/auth.routes')
 const adminRoutes = require('./src/routes/admin.routes')
 const paymentRoutes = require('./src/routes/payment.routes')
 const orderRoutes = require('./src/routes/order.routes')
-const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const mealItemRoutes = require('./src/routes/mealItem.routes')
+const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
 const userRoutes = require('./src/routes/user.routes')
-
 const app = express()
-let reconnectInProgress = false
-let reconnectPromise = null
 
 app.use(helmet())
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
 app.use(morgan('dev'))
-app.use(express.json({ limit: '15mb' }))
-app.use(express.urlencoded({ extended: true, limit: '15mb' }))
+app.use(express.json())
 app.use(cookieParser())
 
 app.get('/api/health', (_req, res) => {
@@ -41,38 +35,20 @@ app.get('/api/health', (_req, res) => {
   })
 })
 
-const dbCheckMiddleware = async (req, res, next) => {
-  if (getMongoStatus().connected) {
-    return next()
-  }
-
-  try {
-    if (!reconnectPromise) {
-      reconnectPromise = connectDB().finally(() => {
-        reconnectPromise = null
-      })
-    }
-
-    await reconnectPromise
-  } catch (_error) {
-    // Handled below by connected check.
-  }
-
+const dbCheckMiddleware = (req, res, next) => {
   if (!getMongoStatus().connected) {
     return res.status(503).json({
       success: false,
       message: 'Database unavailable. Check MONGO_URI and Atlas IP access list.',
     })
   }
-
-  return next()
+  next()
 }
 
 app.use('/api/auth', dbCheckMiddleware, authRoutes)
-app.use('/api/users', dbCheckMiddleware, userRoutes)
 app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
-app.use('/api/meals', dbCheckMiddleware, mealItemRoutes)
 app.use('/api/chat', dbCheckMiddleware, chatRoutes)
+app.use('/api/users', dbCheckMiddleware, userRoutes)
 
 
 app.use('/api/admin', (req, res, next) => {
@@ -105,15 +81,15 @@ app.use('/api/orders', (req, res, next) => {
   return next()
 }, orderRoutes)
 
-const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist')
-const frontendIndexPath = path.join(frontendBuildPath, 'index.html')
-
-if (fs.existsSync(frontendIndexPath)) {
-  app.use(express.static(frontendBuildPath))
-  app.get(/^(?!\/api).*/, (_req, res) => {
-    res.sendFile(frontendIndexPath)
-  })
-}
+app.use('/api/meals', (req, res, next) => {
+  if (!getMongoStatus().connected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable.',
+    })
+  }
+  return next()
+}, mealItemRoutes)
 
 // Global error handler
 app.use((err, _req, res, _next) => {
@@ -151,22 +127,6 @@ const findAvailablePort = (startPort, maxAttempts = 20) =>
     tryPort()
   })
 
-const startMongoReconnectLoop = () => {
-  setInterval(async () => {
-    if (getMongoStatus().connected || reconnectInProgress) return
-
-    reconnectInProgress = true
-    try {
-      await connectDB()
-      console.log('[INFO] MongoDB reconnected successfully.')
-    } catch (error) {
-      console.warn(`[WARN] MongoDB reconnect failed: ${error.message}`)
-    } finally {
-      reconnectInProgress = false
-    }
-  }, 15000)
-}
-
 const start = async () => {
   try {
     await connectDB()
@@ -183,8 +143,6 @@ const start = async () => {
   if (port !== requestedPort) {
     console.warn(`[WARN] Port ${requestedPort} is busy. Using port ${port} instead.`)
   }
-
-  startMongoReconnectLoop()
 
   app.listen(port, () => console.log(`[SERVER] http://localhost:${port}`))
 }

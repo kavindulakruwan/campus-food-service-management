@@ -140,7 +140,7 @@ exports.getMealSuggestions = async (req, res) => {
 
 exports.createMeal = async (req, res) => {
   const quantity = Number(req.body?.quantity)
-  const safeQuantity = Number.isFinite(quantity) && quantity >= 0 ? quantity : 1
+  const safeQuantity = Number.isFinite(quantity) && quantity >= 1 ? quantity : 1
 
   const payload = {
     ...req.body,

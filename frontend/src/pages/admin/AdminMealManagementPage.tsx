@@ -6,6 +6,25 @@ type Category = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'
 
 const categoryOptions: Category[] = ['breakfast', 'lunch', 'dinner', 'snack', 'beverage']
 
+const normalizeCategory = (value: unknown): Category => {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (categoryOptions.includes(normalized as Category)) {
+    return normalized as Category
+  }
+  return 'lunch'
+}
+
+const getMealId = (meal: MealItem | Record<string, unknown>) => {
+  const directId = typeof meal.id === 'string' ? meal.id : ''
+  if (directId) return directId
+
+  const fallbackId = typeof (meal as { _id?: unknown })._id === 'string'
+    ? String((meal as { _id?: unknown })._id)
+    : ''
+
+  return fallbackId
+}
+
 const emptyForm = {
   name: '',
   category: 'lunch' as Category,
@@ -55,7 +74,12 @@ const AdminMealManagementPage = () => {
         search: query,
         category,
       })
-      setMeals(response.data.data.meals)
+      const rows = Array.isArray(response.data?.data?.meals) ? response.data.data.meals : []
+      setMeals(rows.map((meal: any) => ({
+        ...meal,
+        id: meal.id || meal._id || '',
+        category: normalizeCategory(meal.category),
+      })))
     } catch (fetchError: any) {
       setError(fetchError?.response?.data?.message || 'Failed to load meals')
     } finally {
@@ -83,6 +107,11 @@ const AdminMealManagementPage = () => {
     setError('')
     setMessage('')
 
+    if (createForm.quantity < 1) {
+      setError('Quantity must be at least 1 so students can see and order the meal.')
+      return
+    }
+
     if (!createForm.imageUrl) {
       setError('Please select a meal image before creating the meal')
       return
@@ -100,10 +129,12 @@ const AdminMealManagementPage = () => {
   }
 
   const openEdit = (meal: MealItem) => {
+    const normalizedCategory = normalizeCategory(meal.category)
+
     setEditingMeal(meal)
     setEditForm({
       name: meal.name,
-      category: meal.category,
+      category: normalizedCategory,
       price: meal.price,
       quantity: meal.quantity,
       calories: meal.calories,
@@ -126,8 +157,17 @@ const AdminMealManagementPage = () => {
     setError('')
     setMessage('')
 
+    const mealId = getMealId(editingMeal)
+    if (!mealId) {
+      setError('Unable to update this meal because its ID is missing. Please refresh and try again.')
+      return
+    }
+
     try {
-      const response = await updateMeal(editingMeal.id, editForm)
+      const response = await updateMeal(mealId, {
+        ...editForm,
+        category: normalizeCategory(editForm.category),
+      })
       setMessage(response.data.message)
       setEditingMeal(null)
       await loadMeals()
@@ -137,6 +177,12 @@ const AdminMealManagementPage = () => {
   }
 
   const handleDelete = async (meal: MealItem) => {
+    const mealId = getMealId(meal)
+    if (!mealId) {
+      setError('Unable to delete this meal because its ID is missing. Please refresh and try again.')
+      return
+    }
+
     const confirmed = window.confirm(`Delete meal "${meal.name}"?`)
     if (!confirmed) return
 
@@ -144,7 +190,7 @@ const AdminMealManagementPage = () => {
     setMessage('')
 
     try {
-      const response = await deleteMeal(meal.id)
+      const response = await deleteMeal(mealId)
       setMessage(response.data.message)
       await loadMeals()
     } catch (deleteError: any) {
@@ -251,7 +297,7 @@ const AdminMealManagementPage = () => {
               <input
                 required
                 type="number"
-                min={0}
+                min={1}
                 value={createForm.quantity}
                 onChange={(event) => setCreateForm((prev) => ({ ...prev, quantity: Number(event.target.value) }))}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
@@ -382,7 +428,7 @@ const AdminMealManagementPage = () => {
         ) : meals.length === 0 ? (
           <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">No meals found</div>
         ) : meals.map((meal) => (
-          <article key={meal.id} className="group relative mx-auto w-full max-w-[265px] overflow-hidden rounded-3xl border border-white/40 bg-white/35 text-slate-900 shadow-[0_14px_40px_-20px_rgba(15,23,42,0.45)] ring-1 ring-white/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-white/45 hover:shadow-[0_24px_50px_-24px_rgba(15,23,42,0.55)]">
+          <article key={getMealId(meal) || meal.name} className="group relative mx-auto w-full max-w-[265px] overflow-hidden rounded-3xl border border-white/40 bg-white/35 text-slate-900 shadow-[0_14px_40px_-20px_rgba(15,23,42,0.45)] ring-1 ring-white/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-white/45 hover:shadow-[0_24px_50px_-24px_rgba(15,23,42,0.55)]">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/55 via-white/15 to-orange-200/30" />
 
             <div className="relative h-36 w-full overflow-hidden border-b border-white/30 bg-slate-100/70">
