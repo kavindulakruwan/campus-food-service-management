@@ -100,7 +100,8 @@ exports.verifyPayment = async (req, res) => {
     await payment.save();
 
     await Order.findByIdAndUpdate(payment.order, {
-      paymentStatus: success ? 'Paid' : 'Failed'
+      paymentStatus: success ? 'Paid' : 'Failed',
+      status: success ? 'Completed' : 'Pending',
     });
 
     res.status(200).json({ success: true, payment });

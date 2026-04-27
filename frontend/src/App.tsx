@@ -22,8 +22,11 @@ import RecommendationsPage from './pages/student/RecommendationsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminMealManagementPage from './pages/admin/AdminMealManagementPage'
 import AdminPaymentDashboard from './pages/admin/AdminPaymentDashboard'
+import AdminRecommendationsPage from './pages/admin/AdminRecommendationsPage'
 import AdminUserManagementPage from './pages/admin/AdminUserManagementPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
+import AdminAlertsPage from './pages/admin/AdminAlertsPage'
+import AdminMealPlannerPage from './pages/admin/AdminMealPlannerPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import RoleRoute from './routes/RoleRoute'
@@ -235,6 +238,14 @@ function App() {
               )}
             />
             <Route
+              path="admin/meal-plans"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminMealPlannerPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
               path="admin/settings"
               element={(
                 <RoleRoute roles={['admin']}>
@@ -247,6 +258,22 @@ function App() {
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminPaymentDashboard />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="admin/recommendations"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminRecommendationsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="admin/alerts"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminAlertsPage />
                 </RoleRoute>
               )}
             />

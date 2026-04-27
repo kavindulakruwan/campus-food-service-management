@@ -227,6 +227,8 @@ const listMealPlans = async (req, res) => {
     search = '',
     mealTime = 'all',
     date = '',
+    startDate = '',
+    endDate = '',
     page = '1',
     limit = '20',
   } = req.query
@@ -245,6 +247,19 @@ const listMealPlans = async (req, res) => {
     const nextDay = new Date(targetDate)
     nextDay.setUTCDate(nextDay.getUTCDate() + 1)
     query.date = { $gte: targetDate, $lt: nextDay }
+  } else if (startDate || endDate) {
+    query.date = {}
+
+    if (startDate) {
+      query.date.$gte = parseDate(startDate)
+    }
+
+    if (endDate) {
+      const targetEndDate = parseDate(endDate)
+      const nextDay = new Date(targetEndDate)
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+      query.date.$lt = nextDay
+    }
   }
 
   if (search) {

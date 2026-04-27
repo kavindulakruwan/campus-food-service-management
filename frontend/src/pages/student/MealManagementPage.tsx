@@ -303,8 +303,8 @@ Kokis | 80g | 250 | N/A | N/A | N/A
               {/* Bar Chart: Weekly Trend */}
               <div className="bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-6">Weekly Consumption</h3>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0">
+                  <ResponsiveContainer width="100%" height={256} minWidth={0}>
                     <BarChart
                       data={weeklyMealData}
                       margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
@@ -328,8 +328,8 @@ Kokis | 80g | 250 | N/A | N/A | N/A
               {/* Pie Chart: Monthly Most Pop */}
               <div className="bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-6">Your Top Dishes</h3>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0">
+                  <ResponsiveContainer width="100%" height={256} minWidth={0}>
                     <PieChart>
                       <Pie
                         data={monthlyPopularMeals}

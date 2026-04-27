@@ -87,6 +87,8 @@ export interface AdminMealPlanFilters {
   search?: string
   mealTime?: 'all' | 'breakfast' | 'lunch' | 'dinner'
   date?: string
+  startDate?: string
+  endDate?: string
   page?: number
   limit?: number
 }

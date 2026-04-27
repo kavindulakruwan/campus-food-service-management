@@ -1,33 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { orderApi } from '../../api/order.api';
-import {
-  ShoppingBag,
-  Plus,
-  Clock,
-  CheckCircle2,
-  ChefHat,
-  CreditCard,
-  ArrowRight,
-  Package,
-  AlertCircle,
-} from 'lucide-react';
-
-const orderStatusConfig: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-  Completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  Preparing: { bg: 'bg-blue-50', text: 'text-blue-700', icon: <ChefHat className="w-3.5 h-3.5" /> },
-  Pending: { bg: 'bg-amber-50', text: 'text-amber-700', icon: <Clock className="w-3.5 h-3.5" /> },
-};
-
-const paymentStatusConfig: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-  Paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  Pending: { bg: 'bg-red-50', text: 'text-red-700', icon: <AlertCircle className="w-3.5 h-3.5" /> },
-};
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Clock3, Loader2, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { getMeals, type MealItem } from '../../api/meals.api'
+import { orderApi, type CreateOrderRequest } from '../../api/order.api'
 
 type CategoryFilter = 'all' | MealItem['category']
-type OrderStatusFilter = 'all' | 'Pending' | 'Processing' | 'Ready' | 'Completed'
+type OrderStatusFilter = 'All' | 'Pending' | 'Completed' | 'Cancelled'
 type PaymentMethod = 'Cash' | 'PayPal' | 'QRCode'
 type OrderCartItem = MealItem & { quantity: number }
+
+interface StudentOrder {
+  _id: string
+  id?: string
+  orderNumber?: string
+  items: Array<{ name: string; quantity: number; price: number }>
+  totalAmount: number
+  status: 'Pending' | 'Processing' | 'Ready' | 'Completed' | 'Cancelled'
+  paymentStatus: 'Pending' | 'Paid' | 'Failed' | 'Refunded'
+  paymentMethod: PaymentMethod
+  createdAt: string
+}
 
 const categoryOptions: Array<{ label: string; value: CategoryFilter }> = [
   { label: 'All', value: 'all' },
@@ -38,177 +30,205 @@ const categoryOptions: Array<{ label: string; value: CategoryFilter }> = [
   { label: 'Beverage', value: 'beverage' },
 ]
 
+const getOrderId = (order: StudentOrder) => order._id || order.id || ''
+
+const getOrderCategory = (order: StudentOrder): Exclude<OrderStatusFilter, 'All'> => {
+  if (order.status === 'Cancelled') return 'Cancelled'
+  if (order.status === 'Completed' || order.paymentStatus === 'Paid') return 'Completed'
+  return 'Pending'
+}
+
 const OrdersPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const selectedMeal = (location.state as { meal?: MealItem } | null)?.meal
 
   const [meals, setMeals] = useState<MealItem[]>([])
-  const [cart, setCart] = useState<OrderCartItem[]>([])
-  const [orders, setOrders] = useState<any[]>([])
+  const [cart, setCart] = useState<OrderCartItem[]>(() => (selectedMeal ? [{ ...selectedMeal, quantity: 1 }] : []))
+  const [orders, setOrders] = useState<StudentOrder[]>([])
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<CategoryFilter>('all')
-  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('All')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash')
   const [loadingMeals, setLoadingMeals] = useState(false)
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [placingOrder, setPlacingOrder] = useState(false)
   const [error, setError] = useState('')
 
-  const loadOrders = async () => {
-    try {
-      const response = await orderApi.getMyOrders()
-      setOrders(response.data || [])
-    } catch (fetchError) {
-      console.error(fetchError)
-      setError('Unable to load your orders right now.')
-    } finally {
-      setLoadingOrders(false)
-    }
-  }
-
   useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const response = await orderApi.getMyOrders()
+        setOrders(response.data || [])
+      } catch (fetchError) {
+        console.error(fetchError)
+        setError('Failed to load your order history.')
+      } finally {
+        setLoadingOrders(false)
+      }
+    }
+
     void loadOrders()
   }, [])
 
-  if (loading) {
+  useEffect(() => {
+    const loadMeals = async () => {
+      setLoadingMeals(true)
+      try {
+        const response = await getMeals({
+          search: query,
+          category,
+          availability: 'all',
+        })
+        setMeals(response.data.data.meals || [])
+      } catch (fetchError) {
+        console.error(fetchError)
+        setError('Unable to load meals right now.')
+      } finally {
+        setLoadingMeals(false)
+      }
+    }
+
+    void loadMeals()
+  }, [query, category])
+
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart])
+
+  const filteredOrders = useMemo(() => {
+    if (statusFilter === 'All') return orders
+    return orders.filter((order) => getOrderCategory(order) === statusFilter)
+  }, [orders, statusFilter])
+
+  const orderCounts = useMemo(
+    () => ({
+      all: orders.length,
+      pending: orders.filter((order) => getOrderCategory(order) === 'Pending').length,
+      completed: orders.filter((order) => getOrderCategory(order) === 'Completed').length,
+      cancelled: orders.filter((order) => getOrderCategory(order) === 'Cancelled').length,
+    }),
+    [orders],
+  )
+
+  const addToCart = (meal: MealItem) => {
+    setError('')
+    setCart((currentCart) => {
+      const existingItem = currentCart.find((item) => item.id === meal.id)
+      if (existingItem) {
+        return currentCart.map((item) => (item.id === meal.id ? { ...item, quantity: item.quantity + 1 } : item))
+      }
+
+      return [...currentCart, { ...meal, quantity: 1 }]
+    })
+  }
+
+  const updateQuantity = (itemId: string, delta: number) => {
+    setCart((currentCart) =>
+      currentCart
+        .map((item) => (item.id === itemId ? { ...item, quantity: item.quantity + delta } : item))
+        .filter((item) => item.quantity > 0),
+    )
+  }
+
+  const handleCreateOrder = async () => {
+    if (cart.length === 0) {
+      setError('Add at least one meal before placing an order.')
+      return
+    }
+
+    setPlacingOrder(true)
+    setError('')
+
+    try {
+      const request: CreateOrderRequest = {
+        items: cart.map((item) => ({
+          mealId: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        totalAmount: Number(subtotal.toFixed(2)),
+        paymentMethod,
+      }
+
+      const response = await orderApi.createOrder(request)
+      const createdOrder = response.data?.data || response.data
+      const createdOrderId = createdOrder?._id || createdOrder?.id
+
+      setCart([])
+      await loadOrders()
+
+      if (paymentMethod === 'Cash') {
+        return
+      }
+
+      if (createdOrderId) {
+        navigate(`/payments?orderId=${createdOrderId}&method=${paymentMethod}`)
+      } else {
+        navigate('/payments')
+      }
+    } catch (placeError: any) {
+      setError(placeError?.response?.data?.message || 'Failed to place order.')
+    } finally {
+      setPlacingOrder(false)
+    }
+  }
+
+  const getStatusClass = (status: string) => {
+    if (status === 'Completed') return 'bg-emerald-100 text-emerald-700'
+    if (status === 'Processing' || status === 'Pending') return 'bg-amber-100 text-amber-700'
+    return 'bg-slate-100 text-slate-600'
+  }
+
+  if (loadingOrders) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <div className="w-10 h-10 border-3 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
-        <p className="text-sm text-slate-400 font-medium">Loading orders...</p>
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-orange-500" />
       </div>
-    );
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">My Orders</h1>
-          <p className="text-slate-500 mt-1 text-sm">Track your campus food orders and pending payments.</p>
+    <section className="space-y-6">
+      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-orange-500">Food Orders</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Order Booking</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-500">
+          Build a campus meal order, review your cart, and continue to payment without leaving the booking flow.
+        </p>
+      </header>
+
+      {error && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+          {error}
         </div>
-        <button
-          onClick={handleCreateOrder}
-          disabled={creating}
-          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 active:scale-[0.97] disabled:opacity-70 self-start sm:self-auto"
-        >
-          {creating ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Creating...
-            </>
-          ) : (
-            <>
-              <Plus className="w-4 h-4" />
-              Quick Order
-            </>
-          )}
-        </button>
-      </div>
+      )}
 
-      {/* Orders Grid */}
-      <div className="space-y-4">
-        {orders.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-4">
-              <Package className="w-8 h-8 text-slate-300" />
-            </div>
-            <p className="text-lg font-bold text-slate-800">No orders yet</p>
-            <p className="text-sm text-slate-400 mt-1">Create a quick order to get started.</p>
-            <button
-              onClick={handleCreateOrder}
-              disabled={creating}
-              className="mt-4 inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-orange-500/20"
+      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search meals"
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-orange-500/30 focus:ring"
+            />
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as CategoryFilter)}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-orange-500/30 focus:ring"
             >
-              <Plus className="w-4 h-4" />
-              Create First Order
-            </button>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+              Build your order, then use the order tracker to proceed to payment.
+            </div>
           </div>
-        ) : (
-          orders.map((order) => {
-            const oStatus = orderStatusConfig[order.status] || orderStatusConfig.Pending;
-            const pStatus = order.paymentStatus === 'Paid' ? paymentStatusConfig.Paid : paymentStatusConfig.Pending;
-            const date = new Date(order.createdAt);
 
-            return (
-              <div
-                key={order._id}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:border-orange-200 transition-all"
-              >
-                <div className="p-5 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    {/* Left: Order Info */}
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                        <ShoppingBag className="w-6 h-6 text-orange-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {/* Order meta row */}
-                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded">
-                            {order.orderNumber || order._id.substring(0, 8)}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-
-                        {/* Items */}
-                        <h3 className="font-bold text-slate-800 text-sm sm:text-base truncate">
-                          {order.items?.map((i: any) => `${i.quantity}x ${i.name}`).join(', ') || 'No Items'}
-                        </h3>
-
-                        {/* Price + Status badges */}
-                        <div className="flex items-center gap-2 flex-wrap mt-2">
-                          <span className="text-xl font-black text-slate-900">
-                            ${order.totalAmount?.toFixed(2) || '0.00'}
-                          </span>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${oStatus.bg} ${oStatus.text}`}>
-                            {oStatus.icon}
-                            {order.status}
-                          </span>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${pStatus.bg} ${pStatus.text}`}>
-                            {pStatus.icon}
-                            {order.paymentStatus === 'Paid' ? 'Verified' : 'Awaiting Payment'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Action Button */}
-                    <div className="sm:ml-4 shrink-0">
-                      {order.paymentStatus === 'Pending' ? (
-                        <button
-                          onClick={() => navigate(`/checkout?orderId=${order._id}`)}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-orange-500/20 hover:shadow-lg transition-all active:scale-[0.97]"
-                        >
-                          <CreditCard className="w-4 h-4" />
-                          Pay Now
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => navigate('/payments/history')}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-6 rounded-xl transition-colors"
-                        >
-                          View History
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-};
-
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-4 py-3 font-semibold text-slate-800">Available Meals</div>
-            <div className="space-y-3 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3 font-semibold text-slate-800">Available Meals</div>
+            <div className="space-y-3">
               {loadingMeals ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -218,27 +238,30 @@ const OrdersPage = () => {
                 <div className="text-sm text-slate-500">No meals found for your filter.</div>
               ) : (
                 meals.map((meal) => (
-                  <div key={meal.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                  <div key={meal.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3">
                     <div>
                       <p className="font-semibold text-slate-900">{meal.name}</p>
-                      <p className="text-sm text-slate-500">{meal.category} · ${meal.price.toFixed(2)}</p>
+                      <p className="text-sm text-slate-500">
+                        {meal.category} · ${meal.price.toFixed(2)} · Stock: {meal.quantity}
+                      </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => addToCart(meal)}
-                      className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600"
+                      disabled={!meal.isAvailable || meal.quantity <= 0}
+                      className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
-                      Add
+                      {!meal.isAvailable || meal.quantity <= 0 ? 'Out of Stock' : 'Add'}
                     </button>
                   </div>
                 ))
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <aside className="space-y-4">
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-4 py-3 font-semibold text-slate-800">Cart</div>
             <div className="space-y-3 p-4">
               {cart.length === 0 ? (
@@ -287,35 +310,96 @@ const OrdersPage = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-4 py-3 font-semibold text-slate-800">My Orders</div>
             <div className="space-y-3 p-4">
-              {loadingOrders ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Clock3 className="h-4 w-4" />
-                  Loading orders...
-                </div>
-              ) : filteredOrders.length === 0 ? (
+              <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('All')}
+                  className={`rounded-lg px-2 py-1.5 font-semibold transition ${
+                    statusFilter === 'All' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  All ({orderCounts.all})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('Pending')}
+                  className={`rounded-lg px-2 py-1.5 font-semibold transition ${
+                    statusFilter === 'Pending' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  }`}
+                >
+                  Pending ({orderCounts.pending})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('Completed')}
+                  className={`rounded-lg px-2 py-1.5 font-semibold transition ${
+                    statusFilter === 'Completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  }`}
+                >
+                  Completed ({orderCounts.completed})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('Cancelled')}
+                  className={`rounded-lg px-2 py-1.5 font-semibold transition ${
+                    statusFilter === 'Cancelled' ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                  }`}
+                >
+                  Cancelled ({orderCounts.cancelled})
+                </button>
+              </div>
+
+              {filteredOrders.length === 0 ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <ShoppingBag className="h-4 w-4" />
                   No orders available.
                 </div>
               ) : (
                 filteredOrders.map((order) => (
-                  <div key={order._id || order.id} className="rounded-xl border border-slate-100 px-3 py-2">
-                    <p className="text-sm font-semibold text-slate-900">Order #{order._id || order.id}</p>
+                  <div key={getOrderId(order)} className="rounded-xl border border-slate-100 px-3 py-3">
+                    <p className="text-sm font-semibold text-slate-900">Order #{order.orderNumber || getOrderId(order)}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {new Date(order.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+
                     <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className={`rounded-full px-2 py-1 font-medium ${getStatusClass(order.status)}`}>{order.status || 'Pending'}</span>
+                      <span className={`rounded-full px-2 py-1 font-medium ${getStatusClass(getOrderCategory(order))}`}>
+                        {getOrderCategory(order)}
+                      </span>
                       <span className="font-semibold text-slate-700">${Number(order.totalAmount || 0).toFixed(2)}</span>
                     </div>
+
+                    {getOrderCategory(order) === 'Pending' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const orderId = getOrderId(order)
+                          if (!orderId) return
+                          navigate(`/payments?orderId=${orderId}&method=${order.paymentMethod || 'PayPal'}`)
+                        }}
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600"
+                      >
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Proceed to Payment
+                      </button>
+                    ) : null}
                   </div>
                 ))
               )}
             </div>
-          </div>
-        </div>
+          </section>
+        </aside>
       </div>
     </section>
   )

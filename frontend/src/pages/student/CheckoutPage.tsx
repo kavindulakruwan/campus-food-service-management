@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentApi, type PaymentInitiateRequest } from '../../api/payment.api';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
@@ -22,6 +22,7 @@ const CheckoutPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [autoStarted, setAutoStarted] = useState(false);
   // States for real PayPal flow
   const [paypalAmount, setPaypalAmount] = useState<string | null>(null);
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
@@ -200,7 +201,7 @@ const CheckoutPage: React.FC = () => {
         </button>
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 text-center text-white">
+          <div className="bg-linear-to-r from-orange-500 to-orange-600 px-6 py-8 text-center text-white">
             <p className="text-sm opacity-80 font-medium">Amount Due</p>
             <p className="text-4xl font-black mt-1">${Number(paypalAmount).toFixed(2)}</p>
           </div>
@@ -320,7 +321,7 @@ const CheckoutPage: React.FC = () => {
       <button
         onClick={handlePayment}
         disabled={loading}
-        className="w-full py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-base rounded-2xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full py-4 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-base rounded-2xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
       >
         {loading ? (
           <span className="inline-flex items-center gap-2">
