@@ -77,6 +77,12 @@ const mapOrderToPaymentStatus = (order: StudentOrder): PaymentHistoryRow['status
   return 'Pending';
 };
 
+const getPaymentOrderId = (payment: PaymentHistoryRow) => {
+  if (payment.orderId) return payment.orderId;
+  if (typeof payment.order === 'string') return payment.order;
+  return payment.order?._id || '';
+};
+
 const PaymentsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -328,7 +334,7 @@ const PaymentsPage: React.FC = () => {
         </div>
       )}
 
-      <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-md shadow-slate-200/40">
+      <section className="space-y-4 rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-md shadow-slate-200/40">
         <div className="flex items-center justify-between">
           <h2 className="inline-flex items-center gap-2 text-lg font-bold text-slate-900">
             <CreditCard className="h-5 w-5 text-orange-500" />
@@ -346,13 +352,14 @@ const PaymentsPage: React.FC = () => {
         ) : (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
             <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Choose an order</p>
               <select
                 value={selectedOrderId}
                 onChange={(event) => {
                   setSelectedOrderId(event.target.value);
                   setInitiatedPayment(null);
                 }}
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none ring-orange-500/25 focus:bg-white focus:ring"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none ring-orange-500/25 transition focus:border-orange-300 focus:ring"
               >
                 {pendingOrders.map((order) => (
                   <option key={order._id} value={order._id}>
@@ -362,7 +369,7 @@ const PaymentsPage: React.FC = () => {
               </select>
 
               {selectedOrder && (
-                <div className="rounded-2xl border border-orange-100 bg-[linear-gradient(145deg,#fff7ed_0%,#ffffff_52%,#ffedd5_100%)] p-4">
+                <div className="rounded-2xl border border-orange-100 bg-[linear-gradient(145deg,#fff7ed_0%,#ffffff_52%,#ffedd5_100%)] p-4 shadow-sm">
                   <p className="text-sm font-semibold text-slate-900">
                     Order #{selectedOrder.orderNumber || selectedOrder._id}
                   </p>
@@ -378,7 +385,7 @@ const PaymentsPage: React.FC = () => {
 
                   <div className="mt-3 space-y-2">
                     {selectedOrder.items?.map((item, index) => (
-                      <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
+                      <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm shadow-sm">
                         <span className="text-slate-700">{item.name} x {item.quantity}</span>
                         <span className="font-semibold text-slate-900">${(item.price * item.quantity).toFixed(2)}</span>
                       </div>
@@ -395,8 +402,16 @@ const PaymentsPage: React.FC = () => {
               )}
             </div>
 
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_50%,#fff7ed_100%)] p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Payment Options</p>
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_50%,#fff7ed_100%)] p-4 shadow-sm lg:sticky lg:top-5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Payment Options</p>
+                {selectedOrder && (
+                  <span className="rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                    ${Number(selectedOrder.totalAmount || 0).toFixed(2)} due
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -404,13 +419,16 @@ const PaymentsPage: React.FC = () => {
                     setSelectedMethod('PayPal');
                     setInitiatedPayment(null);
                   }}
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                     selectedMethod === 'PayPal'
                       ? 'border-orange-500 bg-orange-500 text-white shadow-md shadow-orange-200'
                       : 'border-slate-300 bg-white text-slate-700 hover:border-orange-300 hover:text-orange-600'
                   }`}
                 >
-                  PayPal
+                  <span className="inline-flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    PayPal
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -418,13 +436,16 @@ const PaymentsPage: React.FC = () => {
                     setSelectedMethod('QRCode');
                     setInitiatedPayment(null);
                   }}
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                     selectedMethod === 'QRCode'
                       ? 'border-orange-500 bg-orange-500 text-white shadow-md shadow-orange-200'
                       : 'border-slate-300 bg-white text-slate-700 hover:border-orange-300 hover:text-orange-600'
                   }`}
                 >
-                  QR Payment
+                  <span className="inline-flex items-center gap-2">
+                    <QrCode className="h-4 w-4" />
+                    QR Payment
+                  </span>
                 </button>
               </div>
 
@@ -432,12 +453,13 @@ const PaymentsPage: React.FC = () => {
                 type="button"
                 onClick={initiatePayment}
                 disabled={processingPayment || !selectedOrder}
-                className="w-full rounded-lg bg-linear-to-r from-slate-900 to-slate-700 px-3 py-2.5 text-sm font-semibold text-white hover:from-slate-800 hover:to-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-slate-900 to-slate-700 px-3 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-300/40 transition hover:from-slate-800 hover:to-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
+                <ArrowRight className="h-4 w-4" />
                 {processingPayment ? 'Processing checkout...' : 'Checkout'}
               </button>
 
-              <div className="rounded-lg border border-orange-100 bg-white/80 px-3 py-2 text-[11px] text-slate-500">
+              <div className="rounded-lg border border-orange-100 bg-white/90 px-3 py-2 text-[11px] text-slate-500">
                 Secure checkout. Your payment status updates automatically in the history table.
               </div>
 
@@ -505,7 +527,10 @@ const PaymentsPage: React.FC = () => {
 
       <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-md shadow-slate-200/40">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Payment History</h2>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Payment History</h2>
+            <p className="text-xs text-slate-500">Track pending, completed, failed, and refunded transactions.</p>
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -513,7 +538,7 @@ const PaymentsPage: React.FC = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by transaction or method"
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none ring-orange-500/25 focus:bg-white focus:ring sm:w-72"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none ring-orange-500/25 transition focus:bg-white focus:ring sm:w-72"
               />
             </div>
             <div className="relative">
@@ -521,7 +546,7 @@ const PaymentsPage: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-                className="rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none ring-orange-500/25 focus:bg-white focus:ring"
+                className="rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none ring-orange-500/25 transition focus:bg-white focus:ring"
               >
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
@@ -533,14 +558,14 @@ const PaymentsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-slate-50/40">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] text-xs uppercase tracking-wider text-slate-500">
+            <thead className="bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] text-xs uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Reference</th>
                 <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3 text-right">Amount</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
@@ -548,7 +573,7 @@ const PaymentsPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500 bg-white">
                     <Receipt className="mx-auto mb-2 h-8 w-8 text-slate-300" />
                     No payment records found for this filter.
                   </td>
@@ -558,6 +583,8 @@ const PaymentsPage: React.FC = () => {
                   const status = statusConfig[payment.status] || statusConfig.Pending;
                   const methodCategory = categoryFromMethod(payment.method);
                   const rowDate = new Date(payment.createdAt);
+                  const paymentOrderId = getPaymentOrderId(payment);
+                  const canOpenPayment = (payment.status === 'Pending' || payment.status === 'Failed') && Boolean(paymentOrderId);
 
                   return (
                     <tr key={payment._id} className="transition even:bg-slate-50/40 hover:bg-orange-50/50">
@@ -572,7 +599,7 @@ const PaymentsPage: React.FC = () => {
                           {payment.method}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-900">${Number(payment.amount || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-900">${Number(payment.amount || 0).toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.bg} ${status.text}`}>
                           {status.icon}
@@ -580,19 +607,22 @@ const PaymentsPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {payment.isSyntheticOrderPayment && payment.status === 'Pending' ? (
+                        {canOpenPayment ? (
                           <button
                             type="button"
                             onClick={() => {
-                              if (payment.orderId) {
-                                setSelectedOrderId(payment.orderId);
+                              if (paymentOrderId) {
+                                setSelectedOrderId(paymentOrderId);
                                 setInitiatedPayment(null);
+                                if (payment.method === 'PayPal' || payment.method === 'QRCode') {
+                                  setSelectedMethod(payment.method);
+                                }
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }
                             }}
-                            className="inline-flex rounded-md px-2 py-1 text-xs font-semibold text-orange-600 transition hover:bg-orange-100 hover:text-orange-700"
+                            className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800"
                           >
-                            Pay Now
+                            {payment.status === 'Failed' ? 'Retry Payment' : 'Pay Now'}
                           </button>
                         ) : payment.isSyntheticOrderPayment ? (
                           <span className="text-xs text-slate-400">No receipt</span>
@@ -600,7 +630,7 @@ const PaymentsPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => navigate(`/payments/receipt/${payment._id}`)}
-                            className="inline-flex rounded-md px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                            className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                           >
                             View Receipt
                           </button>

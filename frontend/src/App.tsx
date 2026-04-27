@@ -27,6 +27,7 @@ import AdminUserManagementPage from './pages/admin/AdminUserManagementPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import AdminAlertsPage from './pages/admin/AdminAlertsPage'
 import AdminMealPlannerPage from './pages/admin/AdminMealPlannerPage'
+import AdminPantryManagementPage from './pages/admin/AdminPantryManagementPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import RoleRoute from './routes/RoleRoute'
@@ -274,6 +275,14 @@ function App() {
               element={(
                 <RoleRoute roles={['admin']}>
                   <AdminAlertsPage />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="admin/pantry"
+              element={(
+                <RoleRoute roles={['admin']}>
+                  <AdminPantryManagementPage />
                 </RoleRoute>
               )}
             />
