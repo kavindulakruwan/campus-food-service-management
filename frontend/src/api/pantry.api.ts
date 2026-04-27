@@ -35,17 +35,18 @@ export interface CreatePantryItemInput {
   category: PantryCategory
   notes?: string
 }
-
+  // GET /pantry/:id/receipt
 export const pantryApi = {
   getMyItems: async () => {
     const response = await axiosClient.get('/pantry/my')
     return response.data
   },
-
+  // GET /pantry/:id/receipt
   createItem: async (payload: CreatePantryItemInput) => {
     const response = await axiosClient.post('/pantry', payload)
     return response.data
   },
+  // GET /pantry/:id/receipt
 
   updateItem: async (id: string, payload: Partial<CreatePantryItemInput>) => {
     const response = await axiosClient.patch(`/pantry/${id}`, payload)
