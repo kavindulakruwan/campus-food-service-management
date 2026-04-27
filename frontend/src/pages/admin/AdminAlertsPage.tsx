@@ -58,14 +58,22 @@ const AdminAlertsPage = () => {
 
     load()
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === alertsStore.getStorageKey()) {
+    const handleExternalUpdate = (event: StorageEvent | Event) => {
+      if (event instanceof StorageEvent) {
+        if (event.key === alertsStore.getStorageKey()) {
+          load()
+        }
+      } else {
         load()
       }
     }
 
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
+    window.addEventListener('storage', handleExternalUpdate)
+    window.addEventListener('alerts-updated', handleExternalUpdate)
+    return () => {
+      window.removeEventListener('storage', handleExternalUpdate)
+      window.removeEventListener('alerts-updated', handleExternalUpdate)
+    }
   }, [refreshTick])
 
   const publishedCount = useMemo(

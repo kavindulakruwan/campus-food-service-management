@@ -72,6 +72,16 @@ const readStore = (): AlertsStore => {
 
 const writeStore = (store: AlertsStore) => {
   localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(store))
+  notifyExternalUpdate()
+}
+
+// Notify other windows/tabs and same-window listeners that alerts changed
+const notifyExternalUpdate = () => {
+  try {
+    window.dispatchEvent(new Event('alerts-updated'))
+  } catch {
+    // ignore in non-browser environments
+  }
 }
 
 const byLatest = (a: { updatedAt?: string; createdAt: string }, b: { updatedAt?: string; createdAt: string }) => {
