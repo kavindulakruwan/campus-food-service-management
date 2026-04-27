@@ -79,7 +79,6 @@ const OrdersPage = () => {
         const response = await getMeals({
           search: query,
           category,
-          availability: 'all',
         })
         const mealsData = response.data?.data?.meals ?? response.data?.data ?? response.data ?? []
         setMeals(Array.isArray(mealsData) ? mealsData : [])
