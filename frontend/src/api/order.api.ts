@@ -7,10 +7,8 @@ export interface OrderItemInput {
   price: number;
 }
 
-export type OrderItemPayload = OrderItemInput;
-
 export interface CreateOrderRequest {
-  items?: OrderItemPayload[];
+  items?: OrderItemInput[];
   totalAmount?: number;
   paymentMethod?: string;
   deliveryAddress?: string;
