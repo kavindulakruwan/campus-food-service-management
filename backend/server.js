@@ -17,6 +17,7 @@ const mealItemRoutes = require('./src/routes/mealItem.routes')
 const mealPlanRoutes = require('./src/routes/mealPlan.routes')
 const chatRoutes = require('./src/routes/chat.routes')
 const userRoutes = require('./src/routes/user.routes')
+const pantryRoutes = require('./src/routes/pantry.routes')
 const app = express()
 
 app.use(helmet())
@@ -49,6 +50,7 @@ app.use('/api/auth', dbCheckMiddleware, authRoutes)
 app.use('/api/meal-plans', dbCheckMiddleware, mealPlanRoutes)
 app.use('/api/chat', dbCheckMiddleware, chatRoutes)
 app.use('/api/users', dbCheckMiddleware, userRoutes)
+app.use('/api/pantry', dbCheckMiddleware, pantryRoutes)
 
 
 app.use('/api/admin', (req, res, next) => {
