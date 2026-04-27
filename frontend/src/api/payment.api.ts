@@ -9,45 +9,47 @@ import axiosClient from './axiosClient';
  * - PUT: not used in payment flow right now
  */
 
+// Request payload for starting a payment session from the frontend.
 export interface PaymentInitiateRequest {
-  orderId?: string; // Optional if we are mocking order creation
+  // Optional because some flows start from an existing pending order.
+  orderId?: string;
   amount?: number;
   method: 'PayPal' | 'QRCode';
 }
 
+// Payment endpoints used by the student payment flow and admin tools.
 export const paymentApi = {
-  // POST /payments/initiate
+  // Create a payment session for the selected order and method.
   initiate: async (data: PaymentInitiateRequest) => {
     const response = await axiosClient.post('/payments/initiate', data);
     return response.data;
   },
 
-  // POST /payments/verify
+  // Update the payment status after the gateway or QR flow completes.
   verify: async (paymentId: string, success: boolean) => {
     const response = await axiosClient.post('/payments/verify', { paymentId, success });
     return response.data;
   },
 
-  // GET /payments/history
+  // Load the signed-in user's payment history.
   getHistory: async () => {
     const response = await axiosClient.get('/payments/history');
     return response.data;
   },
 
-  // GET /payments/:id/receipt
+  // Fetch the receipt for a completed payment.
   getReceipt: async (id: string) => {
     const response = await axiosClient.get(`/payments/${id}/receipt`);
     return response.data;
   },
 
-  // Admin routes
-  // GET /payments
+  // Admin view of every payment record for review and reconciliation.
   getAllPayments: async () => {
     const response = await axiosClient.get('/payments');
     return response.data;
   },
 
-  // POST /payments/:id/refund
+  // Trigger a refund for a completed payment.
   refundPayment: async (id: string) => {
     const response = await axiosClient.post(`/payments/${id}/refund`);
     return response.data;
