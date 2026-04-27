@@ -35,7 +35,29 @@ const paymentSchema = new mongoose.Schema({
   receiptSent: {
     type: Boolean,
     default: false,
-  }
+  },
+  refundRequest: {
+    requested: {
+      type: Boolean,
+      default: false,
+    },
+    reason: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    status: {
+      type: String,
+      enum: ['None', 'Pending', 'Approved', 'Rejected'],
+      default: 'None',
+    },
+    requestedAt: {
+      type: Date,
+    },
+    reviewedAt: {
+      type: Date,
+    },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payment', paymentSchema);

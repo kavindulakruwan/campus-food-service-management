@@ -1,13 +1,22 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderApi } from "../../api/order.api";
+import { getMeals } from "../../api/meals.api";
 
-const MENU = [
+const FALLBACK_MENU = [
   { id: "meal-1", name: "Rice & Curry", description: "Fresh plate with spicy curry and vegetables.", price: 350, emoji: "🍛" },
   { id: "meal-2", name: "Chicken Kottu", description: "Hot shredded roti mixed with veggies and chicken.", price: 450, emoji: "🥘" },
   { id: "meal-3", name: "Egg Hopper Set", description: "Crispy hopper with egg, sambol and lentil curry.", price: 300, emoji: "🍳" },
   { id: "meal-4", name: "Fruit Smoothie", description: "Seasonal fruit shake to refresh your day.", price: 320, emoji: "🥤" },
 ];
+
+const CATEGORY_EMOJI = {
+  breakfast: "🍳",
+  lunch: "🍛",
+  dinner: "🍽️",
+  snack: "🥪",
+  beverage: "🥤",
+};
 
 const STATUS_COLORS = {
   pending: "bg-amber-100 text-amber-700", Pending: "bg-amber-100 text-amber-700",
@@ -20,32 +29,65 @@ const STATUS_COLORS = {
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
+  const [menuItems, setMenuItems] = useState(FALLBACK_MENU);
+  const [menuLoading, setMenuLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [cart, setCart] = useState([]);
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [editingOrderId, setEditingOrderId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [viewOrder, setViewOrder] = useState(null);
   const [qrCode, setQrCode] = useState(null);
   const [cancelling, setCancelling] = useState(null);
+  const [confirming, setConfirming] = useState(null);
   const [activeTab, setActiveTab] = useState("menu");
   const navigate = useNavigate();
 
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.quantity, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+    fetchMenu();
+  }, []);
+
+  const fetchMenu = async () => {
+    setMenuLoading(true);
+    try {
+      const res = await getMeals({ availability: "available" });
+      const rows = res?.data?.data?.meals ?? [];
+      const mapped = rows
+        .filter((meal) => meal?.isAvailable !== false && Number(meal?.quantity ?? 0) > 0)
+        .map((meal) => ({
+          id: meal.id,
+          name: meal.name,
+          description: meal.description || "Fresh meal prepared by admin.",
+          price: Number(meal.discountedPrice ?? meal.price ?? 0),
+          emoji: CATEGORY_EMOJI[meal.category] || "🍽️",
+        }));
+
+      setMenuItems(mapped.length ? mapped : FALLBACK_MENU);
+    } catch {
+      setMenuItems(FALLBACK_MENU);
+    } finally {
+      setMenuLoading(false);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
       const res = await orderApi.getMyOrders();
       const data = res.data?.data ?? res.data ?? [];
       setOrders(Array.isArray(data) ? data : []);
-    } catch { setError("Failed to load orders"); }
-    finally { setLoading(false); }
+    } catch {
+      setError("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addToCart = (item) => {
@@ -59,21 +101,83 @@ const OrdersPage = () => {
   const updateQty = (id, qty) => setCart(prev => qty <= 0 ? prev.filter(c => c.id !== id) : prev.map(c => c.id === id ? { ...c, quantity: qty } : c));
   const removeFromCart = (id) => setCart(prev => prev.filter(c => c.id !== id));
 
+  const resetOrderForm = () => {
+    setCart([]);
+    setDeliveryAddress("");
+    setSpecialInstructions("");
+    setPaymentMethod("cash");
+    setEditingOrderId("");
+  };
+
   const handleCreateOrder = async () => {
     if (cart.length === 0) { setError("Please add at least one item"); return; }
     if (!deliveryAddress.trim()) { setError("Please enter delivery address"); return; }
     setCreating(true); setError("");
     try {
-      const res = await orderApi.createOrder({ items: cart.map(({ name, price, quantity }) => ({ name, price, quantity })), deliveryAddress, specialInstructions, paymentMethod });
-      setSuccess("Order placed successfully!");
-      setCart([]); setDeliveryAddress(""); setSpecialInstructions(""); setPaymentMethod("cash");
+      const payload = {
+        items: cart.map(({ name, price, quantity }) => ({ name, price, quantity })),
+        deliveryAddress,
+        specialInstructions,
+        paymentMethod,
+      };
+
+      if (editingOrderId) {
+        await orderApi.updateOrder(editingOrderId, payload);
+        setSuccess("Order updated successfully!");
+      } else {
+        await orderApi.createOrder(payload);
+        setSuccess("Order placed successfully!");
+      }
+
+      resetOrderForm();
       setActiveTab("history");
       fetchOrders();
-      const orderData = res.data?.data ?? res.data;
-      if (orderData?._id && paymentMethod !== "cash") navigate(`/payments?orderId=${orderData._id}&amount=${orderData.totalAmount}`);
     } catch (e) {
-      setError(e?.response?.data?.message || "Failed to place order");
+      setError(e?.response?.data?.message || (editingOrderId ? "Failed to update order" : "Failed to place order"));
     } finally { setCreating(false); }
+  };
+
+  const handleEdit = (order) => {
+    if (order.status !== "Pending" || order.paymentStatus !== "Pending") {
+      setError("Only pending orders can be edited");
+      return;
+    }
+
+    const editCart = (order.items || []).map((item, index) => ({
+      id: `edit-${order._id}-${index}`,
+      name: item.name,
+      price: Number(item.price || 0),
+      quantity: Math.max(1, Number(item.quantity || 1)),
+      description: "",
+      emoji: "🍽️",
+    }));
+
+    setCart(editCart);
+    setDeliveryAddress(order.deliveryAddress || "");
+    setSpecialInstructions(order.specialInstructions || "");
+    setPaymentMethod(order.paymentMethod || "cash");
+    setEditingOrderId(order._id);
+    setViewOrder(null);
+    setActiveTab("menu");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleConfirm = async (orderId) => {
+    setConfirming(orderId);
+    try {
+      const res = await orderApi.confirmOrder(orderId);
+      const orderData = res.data?.data ?? res.data;
+      setSuccess("Order confirmed. You can now proceed to payment.");
+      fetchOrders();
+      if (orderData?._id) {
+        const preferredMethod = orderData?.paymentMethod === "QRCode" ? "QRCode" : "PayPal";
+        navigate(`/payments?orderId=${orderData._id}&amount=${orderData.totalAmount}&method=${preferredMethod}`);
+      }
+    } catch (e) {
+      setError(e?.response?.data?.message || "Failed to confirm order");
+    } finally {
+      setConfirming(null);
+    }
   };
 
   const handleViewQR = async (orderId) => {
@@ -82,7 +186,9 @@ const OrdersPage = () => {
       const d = res.data?.data ?? res.data;
       if (d?.qrCode) setQrCode({ qrCode: d.qrCode, orderNumber: d.orderNumber ?? "" });
       else setError("QR code not available");
-    } catch { setError("Failed to load QR code"); }
+    } catch {
+      setError("Failed to load QR code");
+    }
   };
 
   const handleCancel = async (orderId) => {
@@ -95,7 +201,9 @@ const OrdersPage = () => {
       fetchOrders();
     } catch (e) {
       setError(e?.response?.data?.message || "Failed to cancel order");
-    } finally { setCancelling(null); }
+    } finally {
+      setCancelling(null);
+    }
   };
 
   const activeOrders = orders.filter(o => o.status !== "cancelled" && o.status !== "Cancelled");
@@ -104,7 +212,7 @@ const OrdersPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-orange-900 p-6 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-slate-800 to-orange-900 p-6 text-white shadow-xl">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/20 blur-2xl" />
         <div className="absolute -bottom-10 left-20 h-32 w-32 rounded-full bg-orange-400/20 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -151,7 +259,15 @@ const OrdersPage = () => {
               <h2 className="font-bold text-slate-900">Available Menu</h2>
             </div>
             <div className="p-4 grid gap-3">
-              {MENU.map(item => {
+              {menuLoading ? (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                  Loading menu...
+                </div>
+              ) : menuItems.length === 0 ? (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                  No meals available right now.
+                </div>
+              ) : menuItems.map(item => {
                 const inCart = cart.find(c => c.id === item.id);
                 return (
                   <div key={item.id} className="rounded-xl border border-slate-100 p-4 flex items-center justify-between gap-4 hover:border-orange-300 hover:bg-orange-50/30 transition-all">
@@ -219,7 +335,14 @@ const OrdersPage = () => {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
-              <h2 className="font-bold text-slate-900">Order Details</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-bold text-slate-900">{editingOrderId ? "Edit Order" : "Order Details"}</h2>
+                {editingOrderId && (
+                  <button onClick={resetOrderForm} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200">
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5">Delivery Address *</label>
                 <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="e.g. Room 204, Block A" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
@@ -237,8 +360,8 @@ const OrdersPage = () => {
                   <option value="QRCode">QR Code</option>
                 </select>
               </div>
-              <button onClick={handleCreateOrder} disabled={creating || cart.length === 0} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black text-sm hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 transition shadow-lg shadow-orange-200">
-                {creating ? "Placing Order..." : `Place Order - Rs. ${cartTotal.toFixed(2)}`}
+              <button onClick={handleCreateOrder} disabled={creating || cart.length === 0} className="w-full py-3.5 rounded-xl bg-linear-to-r from-orange-500 to-orange-600 text-white font-black text-sm hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 transition shadow-lg shadow-orange-200">
+                {creating ? (editingOrderId ? "Saving Changes..." : "Placing Order...") : (editingOrderId ? `Save Changes - Rs. ${cartTotal.toFixed(2)}` : `Place Order - Rs. ${cartTotal.toFixed(2)}`)}
               </button>
             </div>
           </div>
@@ -277,10 +400,18 @@ const OrdersPage = () => {
                         <div className="flex gap-1 flex-wrap">
                           <button onClick={() => setViewOrder(order)} className="text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold">View</button>
                           <button onClick={() => handleViewQR(order._id)} className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-semibold">QR</button>
-                          {order.paymentStatus === "Pending" && order.status !== "Cancelled" && (
-                            <button onClick={() => navigate(`/payments?orderId=${order._id}&amount=${order.totalAmount}`)} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold">Pay</button>
+                          {order.status === "Pending" && order.paymentStatus === "Pending" && (
+                            <button onClick={() => handleEdit(order)} className="text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold">Edit</button>
                           )}
-                          {["pending", "confirmed", "Pending", "Processing"].includes(order.status) && (
+                          {order.status === "Pending" && order.paymentStatus === "Pending" && (
+                            <button onClick={() => handleConfirm(order._id)} disabled={confirming === order._id} className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold disabled:opacity-50">
+                              {confirming === order._id ? "Confirming..." : "Confirm Order"}
+                            </button>
+                          )}
+                          {order.status === "Processing" && order.paymentStatus !== "Paid" && (
+                            <button onClick={() => navigate(`/payments?orderId=${order._id}&amount=${order.totalAmount}&method=${order.paymentMethod === "QRCode" ? "QRCode" : "PayPal"}`)} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold">Pay Now</button>
+                          )}
+                          {order.status === "Pending" && (
                             <button onClick={() => handleCancel(order._id)} disabled={cancelling === order._id} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 font-semibold disabled:opacity-50">
                               {cancelling === order._id ? "..." : "Cancel"}
                             </button>
@@ -327,7 +458,10 @@ const OrdersPage = () => {
               </div>
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100">
-              {["pending", "confirmed", "Pending", "Processing"].includes(viewOrder.status) && (
+              {viewOrder.status === "Pending" && viewOrder.paymentStatus === "Pending" && (
+                <button onClick={() => handleEdit(viewOrder)} className="px-4 py-2 rounded-xl bg-amber-50 text-amber-700 text-sm font-bold hover:bg-amber-100">Edit Order</button>
+              )}
+              {viewOrder.status === "Pending" && (
                 <button onClick={() => handleCancel(viewOrder._id)} className="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-bold hover:bg-red-100">Cancel Order</button>
               )}
               <button onClick={() => setViewOrder(null)} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-bold">Close</button>

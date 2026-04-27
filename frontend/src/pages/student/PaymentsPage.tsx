@@ -28,10 +28,18 @@ interface StudentOrder {
   orderNumber?: string;
   items: OrderItem[];
   totalAmount: number;
-  status: 'Pending' | 'Processing' | 'Ready' | 'Completed' | 'Cancelled';
+  status: 'Pending' | 'Processing' | 'Ready' | 'Completed' | 'Cancelled' | 'Confirmed' | 'confirmed';
   paymentStatus: 'Pending' | 'Paid' | 'Failed' | 'Refunded';
-  paymentMethod: 'Cash' | 'PayPal' | 'QRCode';
+  paymentMethod: 'Cash' | 'PayPal' | 'QRCode' | 'cash' | 'card' | 'paypal' | 'meal_plan' | 'CreditCard';
   createdAt: string;
+}
+
+interface RefundRequestInfo {
+  requested?: boolean;
+  reason?: string;
+  status?: 'None' | 'Pending' | 'Approved' | 'Rejected';
+  requestedAt?: string;
+  reviewedAt?: string;
 }
 
 interface PaymentHistoryRow {
@@ -44,6 +52,7 @@ interface PaymentHistoryRow {
   order?: string | { _id?: string; items?: OrderItem[] };
   orderId?: string;
   isSyntheticOrderPayment?: boolean;
+  refundRequest?: RefundRequestInfo;
 }
 
 interface InitiatedPayment {
@@ -63,11 +72,27 @@ const categoryFromMethod = (method: string) => {
   if (method === 'PayPal') return { label: 'PayPal', color: 'bg-blue-50 text-blue-700' };
   if (method === 'QRCode') return { label: 'QR Scan', color: 'bg-teal-50 text-teal-700' };
   if (method === 'Cash') return { label: 'Cash', color: 'bg-amber-50 text-amber-700' };
+  if (method?.toLowerCase?.() === 'card') return { label: 'Card', color: 'bg-indigo-50 text-indigo-700' };
   return { label: 'Other', color: 'bg-slate-50 text-slate-600' };
 };
 
+const normalizeOrderStatus = (status: StudentOrder['status']) => String(status || '').toLowerCase();
+
+const normalizeMethodForCheckout = (method: string): 'PayPal' | 'QRCode' => {
+  const normalizedMethod = String(method || '').toLowerCase();
+  if (normalizedMethod === 'qrcode' || normalizedMethod === 'qr' || normalizedMethod === 'qrpayment') {
+    return 'QRCode';
+  }
+
+  return 'PayPal';
+};
+
 const isOrderPendingForPayment = (order: StudentOrder) => {
-  return order.status !== 'Cancelled' && order.status !== 'Completed' && order.paymentStatus !== 'Paid';
+  const normalizedStatus = normalizeOrderStatus(order.status);
+  return ['pending', 'processing', 'confirmed'].includes(normalizedStatus)
+    && normalizedStatus !== 'cancelled'
+    && order.paymentStatus !== 'Paid'
+    && order.paymentStatus !== 'Refunded';
 };
 
 const mapOrderToPaymentStatus = (order: StudentOrder): PaymentHistoryRow['status'] => {
@@ -77,10 +102,19 @@ const mapOrderToPaymentStatus = (order: StudentOrder): PaymentHistoryRow['status
   return 'Pending';
 };
 
+const normalizeId = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && 'toString' in value) {
+    return String((value as { toString: () => string }).toString());
+  }
+  return '';
+};
+
 const getPaymentOrderId = (payment: PaymentHistoryRow) => {
-  if (payment.orderId) return payment.orderId;
-  if (typeof payment.order === 'string') return payment.order;
-  return payment.order?._id || '';
+  if (payment.orderId) return normalizeId(payment.orderId);
+  if (typeof payment.order === 'string') return normalizeId(payment.order);
+  return normalizeId(payment.order?._id);
 };
 
 const PaymentsPage: React.FC = () => {
@@ -95,9 +129,14 @@ const PaymentsPage: React.FC = () => {
   const [initiatedPayment, setInitiatedPayment] = useState<InitiatedPayment | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [orderPickerSearch, setOrderPickerSearch] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Completed' | 'Failed' | 'Refunded'>('All');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [refundTargetId, setRefundTargetId] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
 
   useEffect(() => {
     if (location.pathname === '/payments/pending') {
@@ -126,8 +165,8 @@ const PaymentsPage: React.FC = () => {
 
   useEffect(() => {
     const requestedMethod = searchParams.get('method');
-    if (requestedMethod === 'PayPal' || requestedMethod === 'QRCode') {
-      setSelectedMethod(requestedMethod);
+    if (requestedMethod) {
+      setSelectedMethod(normalizeMethodForCheckout(requestedMethod));
     }
   }, [searchParams]);
 
@@ -135,8 +174,16 @@ const PaymentsPage: React.FC = () => {
     setLoading(true);
     try {
       const [orderResponse, paymentResponse] = await Promise.all([orderApi.getMyOrders(), paymentApi.getHistory()]);
-      const orderRows = Array.isArray(orderResponse?.data) ? orderResponse.data : [];
-      const paymentRows = Array.isArray(paymentResponse?.data) ? paymentResponse.data : [];
+      const orderRows = Array.isArray(orderResponse?.data?.data)
+        ? orderResponse.data.data
+        : Array.isArray(orderResponse?.data)
+          ? orderResponse.data
+          : [];
+      const paymentRows = Array.isArray(paymentResponse?.data)
+        ? paymentResponse.data
+        : Array.isArray(paymentResponse)
+          ? paymentResponse
+          : [];
       setOrders(orderRows);
       setPayments(paymentRows);
       setError('');
@@ -157,18 +204,81 @@ const PaymentsPage: React.FC = () => {
     [orders],
   );
 
-  useEffect(() => {
-    const requestedOrderId = searchParams.get('orderId');
+  const filteredPendingOrders = useMemo(() => {
+    const token = orderPickerSearch.trim().toLowerCase();
+    if (!token) return pendingOrders;
 
-    if (requestedOrderId && pendingOrders.some((order) => order._id === requestedOrderId)) {
-      setSelectedOrderId(requestedOrderId);
-      return;
+    return pendingOrders.filter((order) => {
+      const orderRef = `${order.orderNumber || ''} ${order._id}`.toLowerCase();
+      const itemNames = (order.items || []).map((item) => item.name.toLowerCase()).join(' ');
+      return orderRef.includes(token) || itemNames.includes(token);
+    });
+  }, [pendingOrders, orderPickerSearch]);
+
+  const selectablePendingOrders = useMemo(() => {
+    if (!selectedOrderId) return filteredPendingOrders;
+
+    const selectedNormalizedId = normalizeId(selectedOrderId);
+    const alreadyIncluded = filteredPendingOrders.some((order) => normalizeId(order._id) === selectedNormalizedId);
+    if (alreadyIncluded) return filteredPendingOrders;
+
+    const selectedOrderRow = pendingOrders.find((order) => normalizeId(order._id) === selectedNormalizedId);
+    if (!selectedOrderRow) return filteredPendingOrders;
+
+    return [selectedOrderRow, ...filteredPendingOrders];
+  }, [filteredPendingOrders, pendingOrders, selectedOrderId]);
+
+  const orderById = useMemo(() => {
+    const index = new Map<string, StudentOrder>();
+    orders.forEach((order) => index.set(normalizeId(order._id), order));
+    return index;
+  }, [orders]);
+
+  useEffect(() => {
+    const requestedOrderId = normalizeId(searchParams.get('orderId'));
+
+    if (requestedOrderId && !selectedOrderId) {
+      const matchedOrder = pendingOrders.find((order) => {
+        const normalizedOrderId = normalizeId(order._id);
+        const normalizedOrderNumber = normalizeId(order.orderNumber);
+        return normalizedOrderId === requestedOrderId || normalizedOrderNumber === requestedOrderId;
+      });
+
+      if (matchedOrder) {
+        setSelectedOrderId(normalizeId(matchedOrder._id));
+        return;
+      }
     }
 
     if (!selectedOrderId && pendingOrders.length > 0) {
       setSelectedOrderId(pendingOrders[0]._id);
     }
   }, [searchParams, pendingOrders, selectedOrderId]);
+
+  useEffect(() => {
+    if (selectedOrderId && !pendingOrders.some((order) => order._id === selectedOrderId)) {
+      setSelectedOrderId(pendingOrders[0]?._id || '');
+      setInitiatedPayment(null);
+    }
+  }, [pendingOrders, selectedOrderId]);
+
+  const focusOrderForPayment = (orderId: string, method: string) => {
+    const normalizedOrderId = normalizeId(orderId);
+    const matchedOrder = orderById.get(normalizedOrderId);
+    if (!matchedOrder || !isOrderPendingForPayment(matchedOrder)) {
+      setError('This order is not eligible for payment right now. Please check its latest status.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setSelectedOrderId(normalizedOrderId);
+    setOrderPickerSearch('');
+    setInitiatedPayment(null);
+    setSelectedMethod(normalizeMethodForCheckout(method));
+    setError('');
+    setNotice('Order selected. Choose your payment method and continue checkout.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const selectedOrder = useMemo(
     () => pendingOrders.find((order) => order._id === selectedOrderId) || null,
@@ -188,7 +298,7 @@ const PaymentsPage: React.FC = () => {
     );
 
     const syntheticRows: PaymentHistoryRow[] = orders
-      .filter((order) => !orderIdsWithPayment.has(order._id))
+      .filter((order) => order.status !== 'Cancelled' && !orderIdsWithPayment.has(order._id))
       .map((order) => ({
         _id: `order-${order._id}`,
         transactionId: order.orderNumber || order._id,
@@ -230,12 +340,13 @@ const PaymentsPage: React.FC = () => {
 
   const initiatePayment = async () => {
     if (!selectedOrder) {
-      setError('Please select a pending order first.');
+      setError('Please select an order first.');
       return;
     }
 
     setProcessingPayment(true);
     setError('');
+    setNotice('');
 
     try {
       const response = await paymentApi.initiate({
@@ -266,11 +377,38 @@ const PaymentsPage: React.FC = () => {
 
       if (success) {
         setStatusFilter('Completed');
+        setNotice('Payment completed successfully.');
+      } else {
+        setNotice('Payment marked as failed. You can retry from history.');
       }
     } catch (verificationError: any) {
       setError(verificationError?.response?.data?.message || 'Failed to update payment status.');
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  const submitRefundRequest = async (paymentId: string) => {
+    const trimmedReason = refundReason.trim();
+    if (trimmedReason.length < 5) {
+      setError('Please enter a clear refund reason (at least 5 characters).');
+      return;
+    }
+
+    setRefundSubmitting(true);
+    setError('');
+    setNotice('');
+
+    try {
+      await paymentApi.requestRefund(paymentId, { reason: trimmedReason });
+      setRefundReason('');
+      setRefundTargetId('');
+      setNotice('Refund request submitted. We will review your request soon.');
+      await loadData();
+    } catch (refundError: any) {
+      setError(refundError?.response?.data?.message || 'Failed to submit refund request.');
+    } finally {
+      setRefundSubmitting(false);
     }
   };
 
@@ -334,6 +472,12 @@ const PaymentsPage: React.FC = () => {
         </div>
       )}
 
+      {notice && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+          {notice}
+        </div>
+      )}
+
       <section className="space-y-4 rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-md shadow-slate-200/40">
         <div className="flex items-center justify-between">
           <h2 className="inline-flex items-center gap-2 text-lg font-bold text-slate-900">
@@ -353,20 +497,40 @@ const PaymentsPage: React.FC = () => {
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Choose an order</p>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={orderPickerSearch}
+                  onChange={(event) => setOrderPickerSearch(event.target.value)}
+                  placeholder="Search order number, id, or item"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none ring-orange-500/25 transition focus:bg-white focus:ring"
+                />
+              </div>
               <select
                 value={selectedOrderId}
                 onChange={(event) => {
                   setSelectedOrderId(event.target.value);
                   setInitiatedPayment(null);
+                  setNotice('');
                 }}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none ring-orange-500/25 transition focus:border-orange-300 focus:ring"
               >
-                {pendingOrders.map((order) => (
+                {selectablePendingOrders.map((order) => (
                   <option key={order._id} value={order._id}>
                     {order.orderNumber || order._id} - ${Number(order.totalAmount || 0).toFixed(2)}
                   </option>
                 ))}
               </select>
+
+              <p className="text-[11px] text-slate-500">
+                Showing {selectablePendingOrders.length} of {pendingOrders.length} pending orders
+              </p>
+
+              {selectablePendingOrders.length === 0 && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                  No matching orders found for this search.
+                </div>
+              )}
 
               {selectedOrder && (
                 <div className="rounded-2xl border border-orange-100 bg-[linear-gradient(145deg,#fff7ed_0%,#ffffff_52%,#ffedd5_100%)] p-4 shadow-sm">
@@ -584,59 +748,140 @@ const PaymentsPage: React.FC = () => {
                   const methodCategory = categoryFromMethod(payment.method);
                   const rowDate = new Date(payment.createdAt);
                   const paymentOrderId = getPaymentOrderId(payment);
-                  const canOpenPayment = (payment.status === 'Pending' || payment.status === 'Failed') && Boolean(paymentOrderId);
+                  const linkedOrder = paymentOrderId ? orderById.get(paymentOrderId) : null;
+                  const refundStatus = payment.refundRequest?.status || 'None';
+                  const canOpenPayment =
+                    (payment.status === 'Pending' || payment.status === 'Failed')
+                    && Boolean(paymentOrderId)
+                    && Boolean(linkedOrder && isOrderPendingForPayment(linkedOrder));
+                  const canRequestRefund =
+                    payment.status === 'Completed'
+                    && !payment.isSyntheticOrderPayment
+                    && refundStatus !== 'Pending'
+                    && refundStatus !== 'Approved';
+                  const canDownloadReceipt = payment.status === 'Completed' && !payment.isSyntheticOrderPayment;
 
                   return (
-                    <tr key={payment._id} className="transition even:bg-slate-50/40 hover:bg-orange-50/50">
-                      <td className="px-4 py-3 text-slate-700">
-                        {rowDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-600">
-                        {(payment.transactionId || payment._id).slice(0, 14)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${methodCategory.color}`}>
-                          {payment.method}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900">${Number(payment.amount || 0).toFixed(2)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.bg} ${status.text}`}>
-                          {status.icon}
-                          {payment.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {canOpenPayment ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (paymentOrderId) {
-                                setSelectedOrderId(paymentOrderId);
-                                setInitiatedPayment(null);
-                                if (payment.method === 'PayPal' || payment.method === 'QRCode') {
-                                  setSelectedMethod(payment.method);
-                                }
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }
-                            }}
-                            className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800"
-                          >
-                            {payment.status === 'Failed' ? 'Retry Payment' : 'Pay Now'}
-                          </button>
-                        ) : payment.isSyntheticOrderPayment ? (
-                          <span className="text-xs text-slate-400">No receipt</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/payments/receipt/${payment._id}`)}
-                            className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                          >
-                            View Receipt
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                    <React.Fragment key={payment._id}>
+                      <tr className="transition even:bg-slate-50/40 hover:bg-orange-50/50">
+                        <td className="px-4 py-3 text-slate-700">
+                          {rowDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-600">
+                          {(payment.transactionId || payment._id).slice(0, 14)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${methodCategory.color}`}>
+                            {payment.method}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-900">${Number(payment.amount || 0).toFixed(2)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.bg} ${status.text}`}>
+                            {status.icon}
+                            {payment.status}
+                          </span>
+                          {refundStatus === 'Pending' && (
+                            <span className="ml-2 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold uppercase text-amber-700">
+                              Refund requested
+                            </span>
+                          )}
+                          {refundStatus === 'Approved' && (
+                            <span className="ml-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold uppercase text-emerald-700">
+                              Refund approved
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            {canOpenPayment && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (paymentOrderId) {
+                                    focusOrderForPayment(paymentOrderId, payment.method);
+                                  }
+                                }}
+                                className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800"
+                              >
+                                {payment.status === 'Failed' ? 'Retry Payment' : 'Pay Now'}
+                              </button>
+                            )}
+
+                            {canRequestRefund && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRefundTargetId(payment._id);
+                                  setRefundReason(payment.refundRequest?.reason || '');
+                                  setNotice('');
+                                  setError('');
+                                }}
+                                className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-800"
+                              >
+                                Request Refund
+                              </button>
+                            )}
+
+                            {canDownloadReceipt && (
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/payments/receipt/${payment._id}`)}
+                                className="inline-flex rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                              >
+                                Download Receipt
+                              </button>
+                            )}
+                          </div>
+
+                          {!canOpenPayment && !canRequestRefund && !canDownloadReceipt && (
+                            <span className="text-xs text-slate-400">
+                              {payment.isSyntheticOrderPayment ? 'No receipt' : 'Receipt after completed payment'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      {refundTargetId === payment._id && (
+                        <tr>
+                          <td colSpan={6} className="bg-white px-4 pb-4">
+                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                                Refund Request Reason
+                              </p>
+                              <textarea
+                                value={refundReason}
+                                onChange={(event) => setRefundReason(event.target.value)}
+                                rows={3}
+                                placeholder="Explain the reason for your refund request"
+                                className="mt-2 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-indigo-300/30 focus:ring"
+                              />
+                              <div className="mt-2 flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRefundTargetId('');
+                                    setRefundReason('');
+                                  }}
+                                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={refundSubmitting}
+                                  onClick={() => {
+                                    void submitRefundRequest(payment._id);
+                                  }}
+                                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                                >
+                                  {refundSubmitting ? 'Submitting...' : 'Submit Request'}
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}

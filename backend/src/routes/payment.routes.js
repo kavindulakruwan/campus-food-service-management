@@ -17,6 +17,7 @@ const express = require('express');
 const {
   initiatePayment,
   verifyPayment,
+  requestRefund,
   getPaymentHistory,
   getPaymentReceipt,
   getAllPayments,
@@ -31,6 +32,7 @@ const router = express.Router();
 router.use(authenticate); // All routes require auth
 router.post('/initiate', initiatePayment);
 router.post('/verify', verifyPayment);
+router.post('/:id/refund-request', requestRefund);
 router.get('/history', getPaymentHistory);
 router.get('/:id/receipt', getPaymentReceipt);
 
